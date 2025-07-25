@@ -77,7 +77,7 @@ typedef struct {
 
 /* Index into cmd_defs array is the command byte */
 typedef struct {
-	SmbusCmdDef *cmd_defs[256];
+	SmbusCmdDef *cmd_defs[CMFW_SMBUS_MSG_MAX];
 } SmbusConfig;
 
 /***Start of SMBus handlers***/
@@ -267,6 +267,9 @@ static SmbusConfig smbus_config = {
 
 static SmbusCmdDef *GetCmdDef(uint8_t cmd)
 {
+	if (cmd >= CMFW_SMBUS_MSG_MAX) {
+		return NULL;
+	}
 	return smbus_config.cmd_defs[cmd];
 }
 
