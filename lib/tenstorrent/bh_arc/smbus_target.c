@@ -77,7 +77,7 @@ typedef struct {
 
 /* Index into cmd_defs array is the command byte */
 typedef struct {
-	SmbusCmdDef *cmd_defs[CMFW_SMBUS_MSG_MAX];
+	uint8_t cmd_defs[CMFW_SMBUS_MSG_MAX];
 } SmbusConfig;
 
 /***Start of SMBus handlers***/
@@ -240,7 +240,7 @@ static SmbusCmdDef smbus_cmd_def[CMFW_SMBUS_MSG_LUT_MAX] = {
 						 .handler = {.rcv_handler = &BlockWriteTest}},
 	};
 
-#define CMBUS_CMD_DEF_ENTRY(_entry) [_entry] = &smbus_cmd_def[_entry##_LUT]
+#define CMBUS_CMD_DEF_ENTRY(_entry) [_entry] = _entry##_LUT
 static SmbusConfig smbus_config = {
 	.cmd_defs = {
 	CMBUS_CMD_DEF_ENTRY(CMFW_SMBUS_REQ),
@@ -270,7 +270,7 @@ static SmbusCmdDef *GetCmdDef(uint8_t cmd)
 	if (cmd >= CMFW_SMBUS_MSG_MAX) {
 		return NULL;
 	}
-	return smbus_config.cmd_defs[cmd];
+	return &smbus_cmd_def[smbus_config.cmd_defs[cmd]];
 }
 
 static uint8_t Crc8(uint8_t crc, uint8_t data)
