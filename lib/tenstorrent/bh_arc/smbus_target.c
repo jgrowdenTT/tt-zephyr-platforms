@@ -70,8 +70,8 @@ typedef union {
 } SmbusHandleData;
 
 typedef struct {
-	SmbusTransType trans_type;
 	SmbusHandleData handler;
+	SmbusTransType trans_type : 8;
 	uint8_t expected_blocksize; /* Only used for block r/w commands */
 } SmbusCmdDef;
 
