@@ -70,10 +70,10 @@ typedef union {
 } SmbusHandleData;
 
 typedef struct {
-	uint8_t valid;
 	SmbusTransType trans_type;
-	uint8_t expected_blocksize; /* Only used for block r/w commands */
 	SmbusHandleData handler;
+	uint8_t valid;
+	uint8_t expected_blocksize; /* Only used for block r/w commands */
 } SmbusCmdDef;
 
 /* Index into cmd_defs array is the command byte */
