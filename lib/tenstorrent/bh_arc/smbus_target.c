@@ -72,13 +72,12 @@ typedef union {
 typedef struct {
 	SmbusTransType trans_type;
 	SmbusHandleData handler;
-	uint8_t valid;
 	uint8_t expected_blocksize; /* Only used for block r/w commands */
 } SmbusCmdDef;
 
 /* Index into cmd_defs array is the command byte */
 typedef struct {
-	SmbusCmdDef cmd_defs[256];
+	SmbusCmdDef *cmd_defs[256];
 } SmbusConfig;
 
 /***Start of SMBus handlers***/
@@ -155,69 +154,120 @@ int32_t BlockWriteTest(const uint8_t *data, uint8_t size)
 static SmbusData smbus_data = {
 	.state = kSmbusStateIdle,
 };
-static SmbusConfig smbus_config = {
-	.cmd_defs = {
-		[CMFW_SMBUS_REQ] = {.valid = 1,
+
+enum CMFWSMBusRegLUT {
+	CMFW_SMBUS_REQ_LUT,
+	CMFW_SMBUS_ACK_LUT,
+	CMFW_SMBUS_DM_STATIC_INFO_LUT,
+	CMFW_SMBUS_PING_LUT,
+	CMFW_SMBUS_FAN_RPM_LUT,
+	CMFW_SMBUS_TEST_READ_LUT,
+	CMFW_SMBUS_TEST_WRITE_LUT,
+	CMFW_SMBUS_TEST_READ_WORD_LUT,
+	CMFW_SMBUS_TEST_WRITE_WORD_LUT,
+	CMFW_SMBUS_TEST_READ_BLOCK_LUT,
+	CMFW_SMBUS_TEST_WRITE_BLOCK_LUT,
+#ifndef CONFIG_TT_SMC_RECOVERY
+	CMFW_SMBUS_POWER_LIMIT_LUT,
+	CMFW_SMBUS_POWER_INSTANT_LUT,
+	CMFW_SMBUS_TELEM_REG_LUT,
+	CMFW_SMBUS_TELEM_DATA_LUT,
+	CMFW_SMBUS_THERM_TRIP_COUNT_LUT,
+#endif
+	CMFW_SMBUS_MSG_LUT_MAX,
+};
+
+//expose these in the header?
+#define CMFW_SMBUS_TELEM_REG 0x26
+#define CMFW_SMBUS_TELEM_DATA 0x27
+
+static SmbusCmdDef smbus_cmd_def[CMFW_SMBUS_MSG_LUT_MAX] = {
+		[CMFW_SMBUS_REQ_LUT] = {
 				    .trans_type = kSmbusTransBlockRead,
 				    .expected_blocksize = 6,
 				    .handler = {.send_handler = &Cm2DmMsgReqSmbusHandler}},
-		[CMFW_SMBUS_ACK] = {.valid = 1,
+		[CMFW_SMBUS_ACK_LUT] = {
 				    .trans_type = kSmbusTransWriteWord,
 				    .handler = {.rcv_handler = &Cm2DmMsgAckSmbusHandler}},
-		[CMFW_SMBUS_DM_STATIC_INFO] = {.valid = 1,
+		[CMFW_SMBUS_DM_STATIC_INFO_LUT] = {
 					       .trans_type = kSmbusTransBlockWrite,
 					       .expected_blocksize = sizeof(dmStaticInfo),
 					       .handler = {.rcv_handler = &Dm2CmSendDataHandler}},
-		[CMFW_SMBUS_PING] = {.valid = 1,
+		[CMFW_SMBUS_PING_LUT] = {
 				     .trans_type = kSmbusTransWriteWord,
 				     .handler = {.rcv_handler = &Dm2CmPingHandler}},
-		[CMFW_SMBUS_FAN_RPM] = {.valid = 1,
+		[CMFW_SMBUS_FAN_RPM_LUT] = {
 					.trans_type = kSmbusTransWriteWord,
 					.handler = {.rcv_handler = &Dm2CmSendFanRPMHandler}},
 #ifndef CONFIG_TT_SMC_RECOVERY
-		[CMFW_SMBUS_POWER_LIMIT] = {.valid = 1,
+		[CMFW_SMBUS_POWER_LIMIT_LUT] = {
 					    .trans_type = kSmbusTransWriteWord,
 					    .handler = {.rcv_handler = &Dm2CmSetBoardPowerLimit}},
-		[CMFW_SMBUS_POWER_INSTANT] = {.valid = 1,
+		[CMFW_SMBUS_POWER_INSTANT_LUT] = {
 					      .trans_type = kSmbusTransWriteWord,
 					      .handler = {.rcv_handler = &Dm2CmSendPowerHandler}},
-		[0x26] = {.valid = 1,
+		[CMFW_SMBUS_TELEM_REG_LUT] = {
 			  .trans_type = kSmbusTransWriteByte,
 			  .handler = {.rcv_handler = &SMBusTelemRegHandler}},
-		[0x27] = {.valid = 1,
+		[CMFW_SMBUS_TELEM_DATA_LUT] = {
 			  .trans_type = kSmbusTransBlockRead,
 			  .expected_blocksize = sizeof(uint32_t),
 			  .handler = {.send_handler = &SMBusTelemDataHandler}},
-		[CMFW_SMBUS_THERM_TRIP_COUNT] =
-			{.valid = 1,
+		[CMFW_SMBUS_THERM_TRIP_COUNT_LUT] =
+			{
 			 .trans_type = kSmbusTransWriteWord,
 			 .handler = {.rcv_handler = &Dm2CmSendThermTripCountHandler}},
 #endif
-		[CMFW_SMBUS_TEST_READ] = {.valid = 1,
+		[CMFW_SMBUS_TEST_READ_LUT] = {
 					  .trans_type = kSmbusTransReadByte,
 					  .handler = {.send_handler = &ReadByteTest}},
-		[CMFW_SMBUS_TEST_WRITE] = {.valid = 1,
+		[CMFW_SMBUS_TEST_WRITE_LUT] = {
 					   .trans_type = kSmbusTransWriteByte,
 					   .handler = {.rcv_handler = &WriteByteTest}},
-		[CMFW_SMBUS_TEST_READ_WORD] = {.valid = 1,
+		[CMFW_SMBUS_TEST_READ_WORD_LUT] = {
 					       .trans_type = kSmbusTransReadWord,
 					       .handler = {.send_handler = &ReadWordTest}},
-		[CMFW_SMBUS_TEST_WRITE_WORD] = {.valid = 1,
+		[CMFW_SMBUS_TEST_WRITE_WORD_LUT] = {
 						.trans_type = kSmbusTransWriteWord,
 						.handler = {.rcv_handler = &WriteWordTest}},
-		[CMFW_SMBUS_TEST_READ_BLOCK] = {.valid = 1,
+		[CMFW_SMBUS_TEST_READ_BLOCK_LUT] = {
 						.trans_type = kSmbusTransBlockRead,
 						.expected_blocksize = 4,
 						.handler = {.send_handler = &BlockReadTest}},
-		[CMFW_SMBUS_TEST_WRITE_BLOCK] = {.valid = 1,
+		[CMFW_SMBUS_TEST_WRITE_BLOCK_LUT] = {
 						 .trans_type = kSmbusTransBlockWrite,
 						 .expected_blocksize = 4,
 						 .handler = {.rcv_handler = &BlockWriteTest}},
+	};
+
+#define CMBUS_CMD_DEF_ENTRY(_entry) [_entry] = &smbus_cmd_def[_entry##_LUT]
+static SmbusConfig smbus_config = {
+	.cmd_defs = {
+	CMBUS_CMD_DEF_ENTRY(CMFW_SMBUS_REQ),
+	CMBUS_CMD_DEF_ENTRY(CMFW_SMBUS_ACK),
+	CMBUS_CMD_DEF_ENTRY(CMFW_SMBUS_DM_STATIC_INFO),
+	CMBUS_CMD_DEF_ENTRY(CMFW_SMBUS_PING),
+	CMBUS_CMD_DEF_ENTRY(CMFW_SMBUS_FAN_RPM),
+	CMBUS_CMD_DEF_ENTRY(CMFW_SMBUS_TEST_READ),
+	CMBUS_CMD_DEF_ENTRY(CMFW_SMBUS_TEST_WRITE),
+	CMBUS_CMD_DEF_ENTRY(CMFW_SMBUS_TEST_READ_WORD),
+	CMBUS_CMD_DEF_ENTRY(CMFW_SMBUS_TEST_WRITE_WORD),
+	CMBUS_CMD_DEF_ENTRY(CMFW_SMBUS_TEST_READ_BLOCK),
+	CMBUS_CMD_DEF_ENTRY(CMFW_SMBUS_TEST_WRITE_BLOCK),
+
+#ifndef CONFIG_TT_SMC_RECOVERY
+	CMBUS_CMD_DEF_ENTRY(CMFW_SMBUS_POWER_LIMIT),
+	CMBUS_CMD_DEF_ENTRY(CMFW_SMBUS_POWER_INSTANT),
+	CMBUS_CMD_DEF_ENTRY(CMFW_SMBUS_TELEM_REG),
+	CMBUS_CMD_DEF_ENTRY(CMFW_SMBUS_TELEM_DATA),
+	CMBUS_CMD_DEF_ENTRY(CMFW_SMBUS_THERM_TRIP_COUNT),
+#endif
+
 	}};
 
 static SmbusCmdDef *GetCmdDef(uint8_t cmd)
 {
-	return &smbus_config.cmd_defs[cmd];
+	return smbus_config.cmd_defs[cmd];
 }
 
 static uint8_t Crc8(uint8_t crc, uint8_t data)
@@ -243,7 +293,7 @@ static int I2CWriteHandler(struct i2c_target_config *config, uint8_t val)
 		WriteReg(I2C0_TARGET_DEBUG_STATE_REG_ADDR, 0xc0de1030);
 		smbus_data.command = val;
 		curr_cmd = GetCmdDef(smbus_data.command);
-		if (!curr_cmd->valid) {
+		if (curr_cmd == NULL) {
 			/* Command not implemented */
 			smbus_data.state = kSmbusStateWaitIdle;
 			return -1;
