@@ -156,6 +156,7 @@ static SmbusData smbus_data = {
 };
 
 enum CMFWSMBusRegLUT {
+	CMFW_SMBUS_INVALID_LUT, // INVALID must be 0 for default valued 0 entries to properly map to NULL
 	CMFW_SMBUS_REQ_LUT,
 	CMFW_SMBUS_ACK_LUT,
 	CMFW_SMBUS_DM_STATIC_INFO_LUT,
@@ -182,6 +183,7 @@ enum CMFWSMBusRegLUT {
 #define CMFW_SMBUS_TELEM_DATA 0x27
 
 static SmbusCmdDef smbus_cmd_def[CMFW_SMBUS_MSG_LUT_MAX] = {
+		[CMFW_SMBUS_INVALID_LUT] = {},
 		[CMFW_SMBUS_REQ_LUT] = {
 				    .trans_type = kSmbusTransBlockRead,
 				    .expected_blocksize = 6,
@@ -270,8 +272,13 @@ static SmbusCmdDef *GetCmdDef(uint8_t cmd)
 	if (cmd >= CMFW_SMBUS_MSG_MAX) {
 		return NULL;
 	}
-	return &smbus_cmd_def[smbus_config.cmd_defs[cmd]];
-}
+	uint8_t idx = smbus_config.cmd_defs[cmd];
+
+	if (idx == 0U) {
+		return NULL; /* Invalid command */
+	}
+	return &smbus_cmd_def[idx];
+} 
 
 static uint8_t Crc8(uint8_t crc, uint8_t data)
 {
