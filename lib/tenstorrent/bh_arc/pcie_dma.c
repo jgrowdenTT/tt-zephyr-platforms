@@ -184,6 +184,25 @@ bool PcieDmaReadTransfer(uint64_t chip_addr, uint64_t host_addr, uint32_t transf
 	return true;
 }
 
+/**
+ * @brief Handler for MSG_TYPE_PCIE_DMA_*_TRANSFER messages
+ *
+ * @details Performs PCIe DMA transfers between chip memory and host memory.
+ *          Handles both chip-to-host and host-to-chip transfers.
+ *
+ * @param request Pointer to the host request message containing:
+ *                - data[0] bits 8-15: Completion data for MSI
+ *                - data[1]: Transfer size in bytes
+ *                - data[2]: Chip address (low 32 bits)
+ *                - data[3]: Chip address (high 32 bits)
+ *                - data[4]: Host address (low 32 bits)
+ *                - data[5]: Host address (high 32 bits)
+ *                - data[6]: MSI completion address (low 32 bits)
+ *                - data[7]: MSI completion address (high 32 bits)
+ * @param response Pointer to the response message to be sent back to host
+ *
+ * @return 0 on success, non-zero on error
+ */
 static uint8_t pcie_dma_transfer_handler(const union request *request, struct response *response)
 {
 	uint8_t completion_data = (request->data[0] >> 8) & 0xff;

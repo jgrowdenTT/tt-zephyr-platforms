@@ -219,6 +219,19 @@ uint32_t GetAiclkTarg(void)
 	return aiclk_ppm.targ_freq;
 }
 
+/**
+ * @brief Handler for MSG_TYPE_AICLK_GO_BUSY and MSG_TYPE_AICLK_GO_LONG_IDLE messages
+ *
+ * @details Controls AI clock arbitration minimum frequency based on system busy/idle state.
+ *          When busy, sets a higher minimum frequency. When going to long idle, sets a lower
+ *          minimum frequency to save power.
+ *
+ * @param request Pointer to the host request message containing:
+ *                - command_code: Either MSG_TYPE_AICLK_GO_BUSY or MSG_TYPE_AICLK_GO_LONG_IDLE
+ * @param response Pointer to the response message to be sent back to host
+ *
+ * @return 0 on success, non-zero on error
+ */
 static uint8_t AiclkBusyHandler(const union request *request, struct response *response)
 {
 	if (request->command_code == MSG_TYPE_AICLK_GO_BUSY) {
@@ -229,14 +242,38 @@ static uint8_t AiclkBusyHandler(const union request *request, struct response *r
 	return 0;
 }
 
+/**
+ * @brief Handler for MSG_TYPE_FORCE_AICLK messages
+ *
+ * @details Forces the AI clock to a specific frequency, overriding automatic
+ *          frequency scaling mechanisms.
+ *
+ * @param request Pointer to the host request message, use request->force_aiclk for structured access
+ * @param response Pointer to the response message to be sent back to host
+ *
+ * @return 0 on success, non-zero on error
+ *
+ * @see force_aiclk_rqst_t
+ */
 static uint8_t ForceAiclkHandler(const union request *request, struct response *response)
 {
-	uint32_t forced_freq = request->data[1];
+	uint32_t forced_freq = request->force_aiclk.forced_freq;
 
 	return ForceAiclk(forced_freq);
 }
 
-/* This message returns aiclk and aiclk control mode */
+/**
+ * @brief Handler for MSG_TYPE_GET_AICLK messages
+ *
+ * @details Returns the current AI clock frequency and control mode information
+ *          to the host.
+ *
+ * @param request Pointer to the host request message
+ * @param response Pointer to the response message to be sent back to host, will contain:
+ *                 - Current AI clock frequency and control mode
+ *
+ * @return 0 on success, non-zero on error
+ */
 static uint8_t get_aiclk_handler(const union request *request, struct response *response)
 {
 	clock_control_get_rate(pll_dev_0, (clock_control_subsys_t)CLOCK_CONTROL_TT_BH_CLOCK_AICLK,
@@ -253,14 +290,29 @@ static uint8_t get_aiclk_handler(const union request *request, struct response *
 	return 0;
 }
 
+/**
+ * @brief Handler for MSG_TYPE_AISWEEP_START and MSG_TYPE_AISWEEP_STOP messages
+ *
+ * @details Controls AI clock frequency sweeping for testing and characterization.
+ *          Can start a frequency sweep between two values or stop an ongoing sweep.
+ *
+ * @param request Pointer to the host request message containing:
+ *                For AISWEEP_START:
+ *                - data[1]: Sweep low frequency
+ *                - data[2]: Sweep high frequency
+ *                For AISWEEP_STOP: No additional parameters
+ * @param response Pointer to the response message to be sent back to host
+ *
+ * @return 0 on success, non-zero on error
+ */
 static uint8_t SweepAiclkHandler(const union request *request, struct response *response)
 {
 	if (request->command_code == MSG_TYPE_AISWEEP_START) {
-		if (request->data[1] == 0 || request->data[2] == 0) {
+		if (request->aisweep_start.sweep_low == 0 || request->aisweep_start.sweep_high == 0) {
 			return 1;
 		}
-		aiclk_ppm.sweep_low = MAX(request->data[1], aiclk_ppm.fmin);
-		aiclk_ppm.sweep_high = MIN(request->data[2], aiclk_ppm.fmax);
+		aiclk_ppm.sweep_low = MAX(request->aisweep_start.sweep_low, aiclk_ppm.fmin);
+		aiclk_ppm.sweep_high = MIN(request->aisweep_start.sweep_high, aiclk_ppm.fmax);
 		aiclk_ppm.sweep_en = 1;
 	} else {
 		aiclk_ppm.sweep_en = 0;

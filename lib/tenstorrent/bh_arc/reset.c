@@ -141,6 +141,17 @@ static int DeassertRiscvResets(void)
 }
 SYS_INIT_APP(DeassertRiscvResets);
 
+/**
+ * @brief Handler for MSG_TYPE_TOGGLE_TENSIX_RESET messages
+ *
+ * @details Toggles the reset state of Tensix cores. This performs an assert-deassert
+ *          sequence to reset the Tensix processing units.
+ *
+ * @param req Pointer to the host request message
+ * @param rsp Pointer to the response message to be sent back to host
+ *
+ * @return 0 on success, non-zero on error
+ */
 static __maybe_unused uint8_t ToggleTensixReset(const union request *req, struct response *rsp)
 {
 	/* Assert reset (active low) */
@@ -164,9 +175,15 @@ REGISTER_MESSAGE(MSG_TYPE_TOGGLE_TENSIX_RESET, ToggleTensixReset);
 #endif
 
 /**
- * @brief Redo Tensix init that gets cleared on Tensix reset
+ * @brief Handler for MSG_TYPE_REINIT_TENSIX messages
  *
- * This includes all NOC programming and any programming within the tile.
+ * @details Reinitializes Tensix cores after a reset. This includes NOC programming
+ *          and any other configuration within the tile that gets cleared on reset.
+ *
+ * @param req Pointer to the host request message
+ * @param rsp Pointer to the response message to be sent back to host
+ *
+ * @return 0 on success, non-zero on error
  */
 static __maybe_unused uint8_t ReinitTensix(const union request *req, struct response *rsp)
 {

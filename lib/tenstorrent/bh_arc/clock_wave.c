@@ -45,9 +45,22 @@ void SwitchClkScheme(ClockingScheme clk_scheme)
 	Wait(10); /* wait for 10 refclk cycles for aiclk to stablize */
 }
 
+/**
+ * @brief Handler for MSG_TYPE_SWITCH_CLK_SCHEME messages
+ *
+ * @details Switches the clock scheme configuration. This affects the AI clock
+ *          distribution and timing.
+ *
+ * @param request Pointer to the host request message, use request->switch_clk_scheme for structured access
+ * @param response Pointer to the response message to be sent back to host
+ *
+ * @return 0 on success, non-zero on error
+ *
+ * @see switch_clk_scheme_rqst_t
+ */
 uint8_t switch_clk_scheme_handler(const union request *request, struct response *response)
 {
-	uint32_t clk_scheme = request->data[1];
+	uint32_t clk_scheme = request->switch_clk_scheme.scheme;
 
 	SwitchClkScheme(clk_scheme);
 	return 0;

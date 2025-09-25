@@ -61,6 +61,7 @@ typedef struct {
 	uint8_t reserved : 1;
 	uint8_t transition_control : 1;
 	uint8_t margin_fault_response : 2;
+
 	VoltageCmdSource voltage_command_source : 2;
 	uint8_t turn_off_behaviour : 1;
 	uint8_t on_off_state : 1;
@@ -288,12 +289,23 @@ uint32_t RegulatorInit(PcbType board_type)
 	return aggregate_i2c_errors;
 }
 
+/**
+ * @brief Handler for MSG_TYPE_SET_VOLTAGE messages
+ *
+ * @details Sets the voltage on the specified regulator via I2C. The request should contain
+ *          the I2C slave address and the voltage value in millivolts.
+ *
+ * @param request Pointer to the host request message, use request->set_voltage for structured access
+ * @param response Pointer to the response message to be sent back to host
+ *
+ * @return 0 on success, non-zero on error
+ *
+ * @see set_voltage_rqst_t
+ */
 static uint8_t set_voltage_handler(const union request *request, struct response *response)
 {
-	uint32_t slave_addr = request->data[1];
-	uint32_t voltage_in_mv = request->data[2];
-
-	switch (slave_addr) {
+	uint32_t slave_addr = request->set_voltage.slave_addr;
+	uint32_t voltage_in_mv = request->set_voltage.voltage_in_mv;	switch (slave_addr) {
 	case P0V8_VCORE_ADDR:
 		set_vcore(voltage_in_mv);
 		return 0;
@@ -305,11 +317,23 @@ static uint8_t set_voltage_handler(const union request *request, struct response
 	}
 }
 
+/**
+ * @brief Handler for MSG_TYPE_GET_VOLTAGE messages
+ *
+ * @details Reads the current voltage from the specified regulator via I2C and returns
+ *          it in the response message.
+ *
+ * @param request Pointer to the host request message, use request->get_voltage for structured access
+ * @param response Pointer to the response message to be sent back to host, will contain:
+ *                 - data[1]: Current voltage reading in millivolts
+ *
+ * @return 0 on success, non-zero on error
+ *
+ * @see get_voltage_rqst_t
+ */
 static uint8_t get_voltage_handler(const union request *request, struct response *response)
 {
-	uint32_t slave_addr = request->data[1];
-
-	switch (slave_addr) {
+	uint32_t slave_addr = request->get_voltage.slave_addr;	switch (slave_addr) {
 	case P0V8_VCORE_ADDR:
 		response->data[1] = get_vcore();
 		return 0;
@@ -321,11 +345,23 @@ static uint8_t get_voltage_handler(const union request *request, struct response
 	}
 }
 
+/**
+ * @brief Handler for MSG_TYPE_SWITCH_VOUT_CONTROL messages
+ *
+ * @details Switches the VOUT control source for voltage regulators. This allows
+ *          switching between different control methods.
+ *
+ * @param request Pointer to the host request message, use request->switch_vout_control for structured access
+ * @param response Pointer to the response message to be sent back to host
+ *
+ * @return 0 on success, non-zero on error
+ *
+ * @see switch_vout_control_rqst_t
+ */
 static uint8_t switch_vout_control_handler(const union request *request, struct response *response)
 {
-	uint32_t source = request->data[1];
+	uint32_t source = request->switch_vout_control.source;	SwitchVoutControl(source);
 
-	SwitchVoutControl(source);
 	return 0;
 }
 

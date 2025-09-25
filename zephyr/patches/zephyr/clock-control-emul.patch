@@ -1,0 +1,216 @@
+From 26b51a06c13d7881c955f7e8d04342f8f7818a0f Mon Sep 17 00:00:00 2001
+From: James Growden <jgrowden@tenstorrent.com>
+Date: Fri, 26 Sep 2025 14:13:53 -0400
+Subject: [PATCH] The new patch for zephyr
+
+Signed-off-by: James Growden <jgrowden@tenstorrent.com>
+---
+ drivers/clock_control/CMakeLists.txt          |   1 +
+ drivers/clock_control/Kconfig                 |   2 +
+ drivers/clock_control/Kconfig.emul            |   8 ++
+ drivers/clock_control/clock_control_emul.c    | 133 ++++++++++++++++++
+ .../clock/zephyr,clock-control-emul.yaml      |  14 ++
+ 5 files changed, 158 insertions(+)
+ create mode 100644 drivers/clock_control/Kconfig.emul
+ create mode 100644 drivers/clock_control/clock_control_emul.c
+ create mode 100644 dts/bindings/clock/zephyr,clock-control-emul.yaml
+
+diff --git a/drivers/clock_control/CMakeLists.txt b/drivers/clock_control/CMakeLists.txt
+index 18b6025df6c..1b74bc60751 100644
+--- a/drivers/clock_control/CMakeLists.txt
++++ b/drivers/clock_control/CMakeLists.txt
+@@ -56,6 +56,7 @@ zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_NRF_HSFLL_LOCAL     clock_cont
+ zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_NRF_LFCLK           clock_control_nrf_lfclk.c)
+ zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_NRF_AUXPLL          clock_control_nrf_auxpll.c)
+ zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_BOUFFALOLAB_BL60X   clock_control_bl60x.c)
++zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_EMUL                clock_control_emul.c)
+ 
+ if(CONFIG_CLOCK_CONTROL_RENESAS_RZA2M_CPG)
+   zephyr_library_sources(clock_control_renesas_rza2m_cpg.c)
+diff --git a/drivers/clock_control/Kconfig b/drivers/clock_control/Kconfig
+index 05a2a7fb8fa..3e15bc58468 100644
+--- a/drivers/clock_control/Kconfig
++++ b/drivers/clock_control/Kconfig
+@@ -114,4 +114,6 @@ source "drivers/clock_control/Kconfig.wch_rcc"
+ 
+ source "drivers/clock_control/Kconfig.it51xxx"
+ 
++source "drivers/clock_control/Kconfig.emul"
++
+ endif # CLOCK_CONTROL
+diff --git a/drivers/clock_control/Kconfig.emul b/drivers/clock_control/Kconfig.emul
+new file mode 100644
+index 00000000000..8c522db0505
+--- /dev/null
++++ b/drivers/clock_control/Kconfig.emul
+@@ -0,0 +1,8 @@
++# Copyright (c) 2025 Tenstorrent AI ULC
++# SPDX-License-Identifier: Apache-2.0
++
++config CLOCK_CONTROL_EMUL
++	bool "Enabled Clock Control Emulation"
++	depends on EMUL
++	help
++		Enable the Clock Control Emulation driver
+diff --git a/drivers/clock_control/clock_control_emul.c b/drivers/clock_control/clock_control_emul.c
+new file mode 100644
+index 00000000000..dfcd3ae7983
+--- /dev/null
++++ b/drivers/clock_control/clock_control_emul.c
+@@ -0,0 +1,133 @@
++/*
++ * Copyright (c) 2024 Tenstorrent AI ULC
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++/**
++ * @file
++ * @brief Clock control emulation driver for native simulation
++ */
++
++#define DT_DRV_COMPAT zephyr_clock_control_emul
++#include <zephyr/device.h>
++#include <zephyr/drivers/clock_control.h>
++#include <zephyr/sys/util.h>
++#include <zephyr/logging/log.h>
++
++LOG_MODULE_REGISTER(clock_control_emul, CONFIG_CLOCK_CONTROL_LOG_LEVEL);
++
++struct clock_control_emul_data {
++	uint32_t clock_rates[16]; /* Support up to 16 different clocks */
++};
++
++struct clock_control_emul_config {
++	uint32_t default_rate;
++};
++
++static int clock_control_emul_on(const struct device *dev, clock_control_subsys_t sys)
++{
++	ARG_UNUSED(dev);
++	ARG_UNUSED(sys);
++	LOG_DBG("Clock on for subsys %p", sys);
++	return 0;
++}
++
++static int clock_control_emul_off(const struct device *dev, clock_control_subsys_t sys)
++{
++	ARG_UNUSED(dev);
++	ARG_UNUSED(sys);
++	LOG_DBG("Clock off for subsys %p", sys);
++	return 0;
++}
++
++static int clock_control_emul_get_rate(const struct device *dev,
++				       clock_control_subsys_t sys,
++				       uint32_t *rate)
++{
++	struct clock_control_emul_data *data = dev->data;
++	const struct clock_control_emul_config *config = dev->config;
++	uintptr_t subsys_id = (uintptr_t)sys;
++
++	if (subsys_id >= ARRAY_SIZE(data->clock_rates)) {
++		LOG_ERR("Invalid subsys ID %lu", subsys_id);
++		return -EINVAL;
++	}
++
++	if (data->clock_rates[subsys_id] == 0) {
++		*rate = config->default_rate;
++	} else {
++		*rate = data->clock_rates[subsys_id];
++	}
++
++	LOG_DBG("Get rate for subsys %lu: %u Hz", subsys_id, *rate);
++	return 0;
++}
++
++static int clock_control_emul_set_rate(const struct device *dev,
++				       clock_control_subsys_t sys,
++				       clock_control_subsys_rate_t rate)
++{
++	struct clock_control_emul_data *data = dev->data;
++	uintptr_t subsys_id = (uintptr_t)sys;
++	uint32_t new_rate = (uint32_t)(uintptr_t)rate;
++
++	if (subsys_id >= ARRAY_SIZE(data->clock_rates)) {
++		LOG_ERR("Invalid subsys ID %lu", subsys_id);
++		return -EINVAL;
++	}
++
++	data->clock_rates[subsys_id] = new_rate;
++	LOG_DBG("Set rate for subsys %lu: %u Hz", subsys_id, new_rate);
++	return 0;
++}
++
++static enum clock_control_status clock_control_emul_get_status(const struct device *dev,
++							       clock_control_subsys_t sys)
++{
++	ARG_UNUSED(dev);
++	ARG_UNUSED(sys);
++	/* Always report clocks as on in emulation */
++	return CLOCK_CONTROL_STATUS_ON;
++}
++
++static const struct clock_control_driver_api clock_control_emul_api = {
++	.on = clock_control_emul_on,
++	.off = clock_control_emul_off,
++	.get_rate = clock_control_emul_get_rate,
++	.set_rate = clock_control_emul_set_rate,
++	.get_status = clock_control_emul_get_status,
++};
++
++static int clock_control_emul_init(const struct device *dev)
++{
++	struct clock_control_emul_data *data = dev->data;
++	const struct clock_control_emul_config *config = dev->config;
++
++	/* Initialize all clock rates to default */
++	for (int i = 0; i < ARRAY_SIZE(data->clock_rates); i++) {
++		data->clock_rates[i] = config->default_rate;
++	}
++
++	LOG_DBG("Clock control emulator initialized with default rate %u Hz",
++		config->default_rate);
++	return 0;
++}
++
++#define CLOCK_CONTROL_EMUL_DEVICE(inst)						\
++	static struct clock_control_emul_data clock_control_emul_data_##inst;		\
++										\
++	static const struct clock_control_emul_config clock_control_emul_config_##inst = { \
++		.default_rate = DT_INST_PROP_OR(inst, default_rate, 1000000000),	\
++	};									\
++										\
++	DEVICE_DT_INST_DEFINE(inst,						\
++			      clock_control_emul_init,				\
++			      NULL,						\
++			      &clock_control_emul_data_##inst,			\
++			      &clock_control_emul_config_##inst,		\
++			      PRE_KERNEL_1,					\
++			      CONFIG_CLOCK_CONTROL_INIT_PRIORITY,		\
++			      &clock_control_emul_api);
++
++DT_INST_FOREACH_STATUS_OKAY(CLOCK_CONTROL_EMUL_DEVICE)
+diff --git a/dts/bindings/clock/zephyr,clock-control-emul.yaml b/dts/bindings/clock/zephyr,clock-control-emul.yaml
+new file mode 100644
+index 00000000000..bc5fb109fc9
+--- /dev/null
++++ b/dts/bindings/clock/zephyr,clock-control-emul.yaml
+@@ -0,0 +1,14 @@
++# Copyright (c) 2025 Tenstorrent AI ULC
++# SPDX-License-Identifier: Apache-2.0
++
++description: Clock control emulation driver for testing
++
++compatible: "zephyr,clock-control-emul"
++
++include: base.yaml
++
++properties:
++  default-rate:
++    type: int
++    default: 1000000000
++    description: Default clock rate in Hz (1 GHz default)
+-- 
+2.34.1
+

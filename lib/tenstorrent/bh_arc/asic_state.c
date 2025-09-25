@@ -39,6 +39,18 @@ void lock_down_for_reset(void)
 	/* (and the I2C code it relies on). */
 }
 
+/**
+ * @brief Handler for MSG_TYPE_ASIC_STATE0 and MSG_TYPE_ASIC_STATE3 messages
+ *
+ * @details Handles ASIC state transitions. State 0 typically represents a low-power
+ *          or shutdown state, while State 3 represents an active operational state.
+ *
+ * @param request Pointer to the host request message containing:
+ *                - command_code: Either MSG_TYPE_ASIC_STATE0 or MSG_TYPE_ASIC_STATE3
+ * @param response Pointer to the response message to be sent back to host
+ *
+ * @return 0 on success, non-zero on error
+ */
 static uint8_t asic_state_handler(const union request *request, struct response *response)
 {
 	if (request->command_code == MSG_TYPE_ASIC_STATE0) {

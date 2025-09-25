@@ -281,3 +281,11 @@ patches:
     comments: |
       Add an optional erase-block-size property to the jedec,spi-nor binding so that mcuboot
       does not complain about slot1_size not being defined.
+  - path: zephyr/clock-control-emul.patch
+    sha256sum: acfeeaf5b1b3c657028f017293ff851563dc7eb9365ada1d9b3551eba1f543e8
+    module: zephyr
+    author: James Growden
+    email: jgrowden@tenstorrent.com
+    date: 2025-09-26
+    comments: |
+      Adds a emulated driver for clock control, for native simulation testing.

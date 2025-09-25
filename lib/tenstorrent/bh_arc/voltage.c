@@ -95,9 +95,22 @@ uint8_t ForceVdd(uint32_t voltage)
 	return 0;
 }
 
+/**
+ * @brief Handler for MSG_TYPE_FORCE_VDD messages
+ *
+ * @details Forces the VDD voltage to a specified value. This is used for voltage
+ *          scaling and power management.
+ *
+ * @param request Pointer to the host request message, use request->force_vdd for structured access
+ * @param response Pointer to the response message to be sent back to host
+ *
+ * @return 0 on success, non-zero on error
+ *
+ * @see force_vdd_rqst_t
+ */
 static uint8_t ForceVddHandler(const union request *request, struct response *response)
 {
-	uint32_t forced_voltage = request->data[1];
+	uint32_t forced_voltage = request->force_vdd.forced_voltage;
 
 	return ForceVdd(forced_voltage);
 }

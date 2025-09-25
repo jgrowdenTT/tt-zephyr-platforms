@@ -167,6 +167,21 @@ static bool check_csm_region(uint32_t addr, uint32_t num_bytes)
 	       (addr + num_bytes) > ((uint32_t)spi_global_buffer + sizeof(spi_global_buffer));
 }
 
+/**
+ * @brief Handler for MSG_TYPE_READ_EEPROM messages
+ *
+ * @details Reads data from SPI EEPROM and copies it to the specified memory location
+ *          or internal buffer.
+ *
+ * @param request Pointer to the host request message containing:
+ *                - data[0] byte 1: Buffer memory type
+ *                - data[1]: SPI address to read from
+ *                - data[2]: Number of bytes to read
+ *                - data[3]: CSM address for data destination
+ * @param response Pointer to the response message to be sent back to host
+ *
+ * @return 0 on success, non-zero on error
+ */
 static uint8_t read_eeprom_handler(const union request *request, struct response *response)
 {
 	uint8_t buffer_mem_type = BYTE_GET(request->data[0], 1);
@@ -191,6 +206,21 @@ static uint8_t read_eeprom_handler(const union request *request, struct response
 	return SpiBlockRead(spi_address, num_bytes, csm_addr);
 }
 
+/**
+ * @brief Handler for MSG_TYPE_WRITE_EEPROM messages
+ *
+ * @details Writes data to SPI EEPROM from the specified memory location
+ *          or internal buffer.
+ *
+ * @param request Pointer to the host request message containing:
+ *                - data[0] byte 1: Buffer memory type
+ *                - data[1]: SPI address to write to
+ *                - data[2]: Number of bytes to write
+ *                - data[3]: CSM address for data source
+ * @param response Pointer to the response message to be sent back to host
+ *
+ * @return 0 on success, non-zero on error
+ */
 static uint8_t write_eeprom_handler(const union request *request, struct response *response)
 {
 	uint8_t buffer_mem_type = BYTE_GET(request->data[0], 1);

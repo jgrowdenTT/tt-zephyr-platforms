@@ -74,12 +74,16 @@ static volatile void *SetupNiuTlb(uint8_t tlb_index, uint8_t nx, uint8_t ny, uin
 
 static uint32_t ReadNocCfgReg(volatile void *regs, uint32_t cfg_reg_index)
 {
-	return ((volatile uint32_t *)regs)[kFirstCfgRegIndex + cfg_reg_index];
+    uint32_t reg_addr = (uint32_t)regs + (kFirstCfgRegIndex + cfg_reg_index) * sizeof(uint32_t);
+
+    return ReadReg(reg_addr);
 }
 
 static void WriteNocCfgReg(volatile void *regs, uint32_t cfg_reg_index, uint32_t value)
 {
-	((volatile uint32_t *)regs)[kFirstCfgRegIndex + cfg_reg_index] = value;
+	uint32_t reg_addr = (uint32_t)regs + (kFirstCfgRegIndex + cfg_reg_index) * sizeof(uint32_t);
+
+	WriteReg(reg_addr, value);
 }
 
 static void EnableOverlayCg(uint8_t tlb_index, uint8_t px, uint8_t py)
@@ -642,6 +646,22 @@ void ClearNocTranslation(void)
 	noc_translation_enabled = false;
 }
 
+/**
+ * @brief Handler for MSG_TYPE_DEBUG_NOC_TRANSLATION messages
+ *
+ * @details Enables or disables NOC (Network on Chip) address translation for debugging.
+ *          This allows remapping addresses to work around defective Tensix columns.
+ *
+ * @param req Pointer to the host request message containing:
+ *            - data[0] bit 8: Enable/disable translation flag
+ *            - data[0] bit 9: PCIe instance selection
+ *            - data[0] bit 10: PCIe instance override flag
+ *            - data[0] bits 16-31: Bad Tensix column mask
+ *            - Additional translation parameters in subsequent data words
+ * @param rsp Pointer to the response message to be sent back to host
+ *
+ * @return 0 on success, non-zero on error
+ */
 static uint8_t DebugNocTranslationHandler(const union request *req, struct response *rsp)
 {
 	bool enable_translation = FIELD_GET(GENMASK(8, 8), req->data[0]);

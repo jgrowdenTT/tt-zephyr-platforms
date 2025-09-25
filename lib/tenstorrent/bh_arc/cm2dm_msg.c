@@ -163,6 +163,18 @@ void UpdateTelemHeartbeatRequest(uint32_t heartbeat)
 	PostCm2DmMsg(kCm2DmMsgTelemHeartbeatUpdate, heartbeat); /* in ms */
 }
 
+/**
+ * @brief Handler for MSG_TYPE_TRIGGER_RESET messages
+ *
+ * @details Triggers a reset operation on the data mover firmware. Validates
+ *          the reset level before sending the reset command.
+ *
+ * @param request Pointer to the host request message containing:
+ *                - data[1]: Reset level/type argument
+ * @param response Pointer to the response message to be sent back to host
+ *
+ * @return 0 on success, non-zero on error
+ */
 static uint8_t reset_dm_handler(const union request *request, struct response *response)
 {
 	uint8_t arg = request->data[1];
@@ -185,6 +197,17 @@ static uint8_t reset_dm_handler(const union request *request, struct response *r
 
 REGISTER_MESSAGE(MSG_TYPE_TRIGGER_RESET, reset_dm_handler);
 
+/**
+ * @brief Handler for MSG_TYPE_PING_DM messages
+ *
+ * @details Sends a ping message to the data mover firmware to test communication
+ *          and verify that the data mover is responsive.
+ *
+ * @param request Pointer to the host request message
+ * @param response Pointer to the response message to be sent back to host
+ *
+ * @return 0 on success, non-zero on error
+ */
 static uint8_t ping_dm_handler(const union request *request, struct response *response)
 {
 	int ret;
@@ -206,6 +229,19 @@ static uint8_t ping_dm_handler(const union request *request, struct response *re
 
 REGISTER_MESSAGE(MSG_TYPE_PING_DM, ping_dm_handler);
 
+/**
+ * @brief Handler for MSG_TYPE_SET_WDT_TIMEOUT messages
+ *
+ * @details Configures the watchdog timer timeout value. This is used to ensure
+ *          system reliability by automatically resetting if the system becomes
+ *          unresponsive.
+ *
+ * @param request Pointer to the host request message containing:
+ *                - Watchdog timeout configuration parameters
+ * @param response Pointer to the response message to be sent back to host
+ *
+ * @return 0 on success, non-zero on error
+ */
 static uint8_t set_watchdog_timeout(const union request *request, struct response *response)
 {
 	const struct device *wdt_dev = DEVICE_DT_GET_OR_NULL(DT_NODELABEL(wdt0));

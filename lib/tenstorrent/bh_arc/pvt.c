@@ -54,7 +54,20 @@ RTIO_DEFINE(pvt_ctx, 16, 16);
  */
 uint8_t buf[sizeof(struct sensor_value) * 8];
 
-/* return selected TS raw reading and temperature in telemetry format */
+/**
+ * @brief Handler for MSG_TYPE_READ_TS messages
+ *
+ * @details Reads temperature sensor data and returns both raw and processed
+ *          temperature values in telemetry format.
+ *
+ * @param request Pointer to the host request message, use request->read_ts for structured access
+ * @param response Pointer to the response message to be sent back to host, will contain:
+ *                 - Temperature sensor data in telemetry format
+ *
+ * @return 0 on success, non-zero on error
+ *
+ * @see read_ts_rqst_t
+ */
 static uint8_t read_ts_handler(const union request *request, struct response *response)
 {
 	struct sensor_value celcius;
@@ -64,7 +77,7 @@ static uint8_t read_ts_handler(const union request *request, struct response *re
 	ret = sensor_get_decoder(pvt, &decoder);
 	ret = sensor_read(&ts_iodev, &pvt_ctx, buf, sizeof(buf));
 
-	uint32_t id = request->data[1];
+	uint32_t id = request->read_ts.id;
 
 	decoder->decode(buf, (struct sensor_chan_spec){SENSOR_CHAN_PVT_TT_BH_TS, id}, NULL, 8,
 			&celcius);
@@ -75,7 +88,20 @@ static uint8_t read_ts_handler(const union request *request, struct response *re
 	return ret;
 }
 
-/* return selected PD raw reading and frequency in telemetry format */
+/**
+ * @brief Handler for MSG_TYPE_READ_PD messages
+ *
+ * @details Reads phase detector data and returns both raw and processed
+ *          frequency values in telemetry format.
+ *
+ * @param request Pointer to the host request message, use request->read_pd for structured access
+ * @param response Pointer to the response message to be sent back to host, will contain:
+ *                 - Phase detector data in telemetry format
+ *
+ * @return 0 on success, non-zero on error
+ *
+ * @see read_pd_rqst_t
+ */
 static uint8_t read_pd_handler(const union request *request, struct response *response)
 {
 	struct sensor_value freq;
@@ -85,13 +111,11 @@ static uint8_t read_pd_handler(const union request *request, struct response *re
 	ret = sensor_get_decoder(pvt, &decoder);
 	ret = sensor_read(&pd_iodev, &pvt_ctx, buf, sizeof(buf));
 
-	uint32_t delay_chain = request->data[1];
+	uint32_t delay_chain = request->read_pd.delay_chain;
 
 	pvt_tt_bh_delay_chain_set(delay_chain);
 
-	uint32_t id = request->data[2];
-
-	decoder->decode(buf, (struct sensor_chan_spec){SENSOR_CHAN_PVT_TT_BH_PD, id}, NULL, 8,
+	uint32_t id = request->read_pd.id;	decoder->decode(buf, (struct sensor_chan_spec){SENSOR_CHAN_PVT_TT_BH_PD, id}, NULL, 8,
 			&freq);
 
 	response->data[1] = pvt_tt_bh_freq_to_raw(&freq);
@@ -100,7 +124,20 @@ static uint8_t read_pd_handler(const union request *request, struct response *re
 	return ret;
 }
 
-/* return selected VM raw reading and voltage in mV */
+/**
+ * @brief Handler for MSG_TYPE_READ_VM messages
+ *
+ * @details Reads voltage monitor data and returns both raw and processed
+ *          voltage values in millivolts.
+ *
+ * @param request Pointer to the host request message, use request->read_vm for structured access
+ * @param response Pointer to the response message to be sent back to host, will contain:
+ *                 - Voltage monitor data in telemetry format
+ *
+ * @return 0 on success, non-zero on error
+ *
+ * @see read_vm_rqst_t
+ */
 static uint8_t read_vm_handler(const union request *request, struct response *response)
 {
 	struct sensor_value volts;
@@ -110,9 +147,7 @@ static uint8_t read_vm_handler(const union request *request, struct response *re
 	ret = sensor_get_decoder(pvt, &decoder);
 	ret = sensor_read(&vm_iodev, &pvt_ctx, buf, sizeof(buf));
 
-	uint32_t id = request->data[1];
-
-	decoder->decode(buf, (struct sensor_chan_spec){SENSOR_CHAN_PVT_TT_BH_VM, id}, NULL, 8,
+	uint32_t id = request->read_vm.id;	decoder->decode(buf, (struct sensor_chan_spec){SENSOR_CHAN_PVT_TT_BH_VM, id}, NULL, 8,
 			&volts);
 
 	response->data[1] = pvt_tt_bh_volt_to_raw(&volts);

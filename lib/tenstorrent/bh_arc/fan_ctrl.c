@@ -137,6 +137,18 @@ void init_fan_ctrl(void)
 		      K_MSEC(fan_ctrl_update_interval));
 }
 
+/**
+ * @brief Handler for MSG_TYPE_FORCE_FAN_SPEED messages
+ *
+ * @details Forces the fan speed to a specific percentage. Only functions if fan control
+ *          is enabled in the firmware feature table.
+ *
+ * @param request Pointer to the host request message containing:
+ *                - raw_speed: Fan speed as a percentage from 0 to 100
+ * @param response Pointer to the response message to be sent back to host
+ *
+ * @return 0 on success, 1 if fan control is disabled, non-zero on other errors
+ */
 static uint8_t force_fan_speed(const union request *request, struct response *response)
 {
 	if (!tt_bh_fwtable_get_fw_table(fwtable_dev)->feature_enable.fan_ctrl_en) {

@@ -70,6 +70,19 @@ void SendPcieMsi(uint8_t pcie_inst, uint32_t vector_id)
 	}
 }
 
+/**
+ * @brief Handler for MSG_TYPE_SEND_PCIE_MSI messages
+ *
+ * @details Sends a PCIe Message Signaled Interrupt (MSI) with the specified
+ *          vector ID on the given PCIe instance.
+ *
+ * @param request Pointer to the host request message containing:
+ *                - data[0] bits 8-8: PCIe instance (0 or 1)
+ *                - data[1]: MSI vector ID
+ * @param response Pointer to the response message to be sent back to host
+ *
+ * @return 0 on success, non-zero on error
+ */
 static uint8_t send_pcie_msi_handler(const union request *request, struct response *response)
 {
 	uint8_t pcie_inst = (request->data[0] >> 8) & 0x1;
