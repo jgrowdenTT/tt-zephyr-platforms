@@ -18,12 +18,19 @@ enum power_bit_flags_e {
 	power_bit_flag_aiclk,
 	power_bit_flag_mrisc,
 	power_bit_flag_tensix,
+	power_bit_flag_l2cpu,
 	power_bit_flag_max
 };
 
 enum power_settings_e {
 	power_settings_max
 };
+
+static int32_t set_l2cpu_enable(bool enable)
+{
+	(void)enable;
+	return 0;
+}
 
 static int32_t apply_power_settings(const struct power_setting_rqst *power_setting)
 {
@@ -39,6 +46,10 @@ static int32_t apply_power_settings(const struct power_setting_rqst *power_setti
 
 	if (power_setting->power_flags_valid > power_bit_flag_tensix) {
 		ret = set_tensix_enable(power_setting->power_flags_bitfield.tensix_enable);
+	}
+
+	if (power_setting->power_flags_valid > power_bit_flag_l2cpu) {
+		ret = set_l2cpu_enable(power_setting->power_flags_bitfield.l2cpu_enable);
 	}
 
 	return ret;
