@@ -43,11 +43,16 @@ except ImportError:
             self.app_build_dir = Path(fwbundle).parent / "smc"
 
     class DeviceAdapter:
-        def __init__(self, fwbundle=None):
+        def __init__(self, fwbundle=None, skip_flash = False):
             self.fwbundle = fwbundle
             self.device_config = DeviceConfig(fwbundle)
+            self.skip_flash = skip_flash
 
         def launch(self):
+            if self.skip_flash:
+                logger.info("Skipping Flash...")
+                return
+
             result = subprocess.run(
                 ["tt-flash", "flash", str(self.fwbundle), "--force"],
                 capture_output=True,
@@ -57,8 +62,8 @@ except ImportError:
             assert "FLASH SUCCESS" in strip_ansi_codes(result.stdout)
 
     @pytest.fixture(scope="session")
-    def unlaunched_dut(fwbundle):
-        return DeviceAdapter(fwbundle)
+    def unlaunched_dut(fwbundle, skip_flash):
+        return DeviceAdapter(fwbundle, skip_flash)
 
 
 TTZP = Path(__file__).parents[3]
@@ -923,3 +928,10 @@ def test_pvt_comprehensive(arc_chip_dut, asic_id):
     The expectation is that the SMC response to these messages is 0.
     """
     assert 0 == pvt_comprehensive_test(arc_chip_dut, asic_id), "test_pvt_msgs failed"
+
+def test_pyluwen_showcase(arc_chip_dut, asic_id):
+    arc_chip = pyluwen.detect_chips()[asic_id]
+
+    response = arc_chip.arc_msg(0x1121, True, False, 0xAAAA, 0xBBBB, 5000)
+
+    print(f"response: {response[0]:08x} {response[1]:08x}")

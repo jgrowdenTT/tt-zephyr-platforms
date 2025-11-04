@@ -31,6 +31,12 @@ def pytest_addoption(parser):
         help="The FW bundle to use for flashing with no twister harness",
     )
 
+    parser.addoption(
+        "--skip-flash",
+        action="store_true",
+        help="Skip flashing when running with no twister harness",
+    )
+
 
 @pytest.fixture(scope="session")
 def asic_id(request):
@@ -46,6 +52,9 @@ def board_name(request):
 def fwbundle(request):
     return request.config.getoption("--fwbundle")
 
+@pytest.fixture(scope="session")
+def skip_flash(request):
+    return request.config.getoption("--skip-flash")
 
 def pytest_exception_interact(node, call, report):
     if report.failed:

@@ -68,4 +68,23 @@ static uint8_t power_setting_msg_handler(const union request *request, struct re
 	return 0;
 }
 
-REGISTER_MESSAGE(TT_SMC_MSG_POWER_SETTING, power_setting_msg_handler);
+static uint8_t say_hi(const union request *request, struct response *response)
+{
+	LOG_INF("%08X %08X %08X %08X %08X %08X %08X %08X", request->data[0], request->data[1],
+		 request->data[2], request->data[3], request->data[4], request->data[5],
+		 request->data[6], request->data[7]);
+
+	response->data[0] = 0;
+	response->data[1] = 0x11111111;
+	response->data[2] = 0x22222222;
+	response->data[3] = 0x33333333;
+	response->data[4] = 0x44444444;
+	response->data[5] = 0x55555555;
+	response->data[6] = 0x66666666;
+	response->data[7] = 0x77777777;
+
+	return 0;
+}
+
+REGISTER_MESSAGE(TT_SMC_MSG_POWER_SETTING, say_hi);
+/* REGISTER_MESSAGE(TT_SMC_MSG_POWER_SETTING, power_setting_msg_handler); */
