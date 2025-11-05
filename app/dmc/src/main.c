@@ -64,6 +64,8 @@ static dmStaticInfo static_info = {.version = 1, .bl_version = 0, .app_version =
 
 static uint16_t max_power;
 
+bool skip_evt_loop;
+
 /* FIXME: notify_smcs should be automatic, we should notify if the SMCs are ready, otherwise
  * record a notification to be sent once they are. Also it's properly per-SMC state.
  */
@@ -128,11 +130,10 @@ static bool process_ping(struct bh_chip *chip, uint8_t msg_id, uint32_t msg_data
 		uint16_t data = 0xA5A5;
 
 		if (msg_data == 0) {
-			ret = bharc_smbus_word_data_read(&chip->config.arc,
-							 CMFW_SMBUS_PING_V2, &data);
+			ret = bharc_smbus_word_data_read(&chip->config.arc, CMFW_SMBUS_PING_V2,
+							 &data);
 		} else {
-			ret = bharc_smbus_word_data_write(&chip->config.arc,
-							  CMFW_SMBUS_PING, data);
+			ret = bharc_smbus_word_data_write(&chip->config.arc, CMFW_SMBUS_PING, data);
 		}
 		retries++;
 	} while (ret != 0U && retries < 10);
@@ -631,6 +632,14 @@ int main(void)
 		}
 	}
 
+	const struct gpio_dt_spec dft_tap_sel =
+		GPIO_DT_SPEC_GET(DT_CHILD(DT_NODELABEL(chip0), dft_tap_sel), gpios);
+	const struct gpio_dt_spec dft_test_mode =
+		GPIO_DT_SPEC_GET(DT_CHILD(DT_NODELABEL(chip0), dft_test_mode), gpios);
+
+	gpio_pin_configure_dt(&dft_tap_sel, GPIO_OUTPUT_INACTIVE);
+	gpio_pin_configure_dt(&dft_test_mode, GPIO_OUTPUT_INACTIVE);
+
 	if (IS_ENABLED(CONFIG_JTAG_LOAD_BOOTROM)) {
 		ARRAY_FOR_EACH_PTR(BH_CHIPS, chip) {
 			ret = jtag_bootrom_init(chip);
@@ -638,7 +647,6 @@ int main(void)
 				LOG_ERR("%s() failed: %d", "jtag_bootrom_init", ret);
 				return ret;
 			}
-
 
 			bharc_disable_i2cbus(&chip->config.arc);
 
@@ -677,6 +685,9 @@ int main(void)
 	while (true) {
 		uint32_t events = tt_event_wait(TT_EVENT_ANY, K_FOREVER);
 
+		if (skip_evt_loop) {
+			continue;
+		}
 		/* These are urgent events, and gated by their own flags. */
 		handle_therm_trip();
 
