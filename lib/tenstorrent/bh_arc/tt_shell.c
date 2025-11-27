@@ -148,8 +148,14 @@ static int telem_handler(const struct shell *sh, size_t argc, char **argv)
 	return 0;
 }
 
+static int jg(const struct shell *sh, size_t argc, char **argv)
+{
+
+}
+
 SHELL_STATIC_SUBCMD_SET_CREATE(
 	sub_tt_commands, SHELL_CMD_ARG(mrisc_power, NULL, "[off|on]", mrisc_power_handler, 2, 0),
+	SHELL_CMD_ARG(jg, NULL, "[off|on]", jg, 1, 0),
 	SHELL_CMD_ARG(tensix_power, NULL, "[off|on]", tensix_enable_handler, 2, 0),
 	SHELL_CMD_ARG(l2cpu_power, NULL, "[off|on]", l2cpu_enable_handler, 2, 0),
 	SHELL_CMD_ARG(asic_state, NULL, "[|0|3]", asic_state_handler, 1, 1),
