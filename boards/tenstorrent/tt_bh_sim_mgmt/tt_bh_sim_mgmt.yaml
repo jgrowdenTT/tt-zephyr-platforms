@@ -1,0 +1,9 @@
+identifier: tt_bh_sim_mgmt
+name: Tenstorrent Blackhole Management RV64 (ttsim)
+type: qemu
+arch: riscv
+toolchain:
+  - zephyr
+supported: []
+ram: 512
+flash: 0

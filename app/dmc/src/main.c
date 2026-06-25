@@ -30,7 +30,9 @@
 #include <tenstorrent/bh_arc.h>
 #include <tenstorrent/event.h>
 #include <tenstorrent/jtag_bootrom.h>
+#if defined(CONFIG_LOG_BACKEND_RINGBUF)
 #include <tenstorrent/log_backend_ringbuf.h>
+#endif
 #include <tenstorrent/tt_smbus_regs.h>
 
 #define RESET_UNIT_ARC_PC_CORE_0 0x80030C00
@@ -39,6 +41,17 @@
 #define LED_BLINK_RATE_MS 400
 
 LOG_MODULE_REGISTER(main, CONFIG_TT_APP_LOG_LEVEL);
+
+/* Periodic console flush task for debugging */
+static void console_flush_fn(struct k_work *work)
+{
+	static uint32_t flush_count;
+
+	printk("[console_flush] count=%u\n", flush_count++);
+	k_work_reschedule(k_work_delayable_from_work(work), K_MSEC(100));
+}
+
+K_WORK_DELAYABLE_DEFINE(console_flush_work, console_flush_fn);
 
 BUILD_ASSERT(IS_ENABLED(CONFIG_TT_BH_ARC_EMUL) || PARTITION_EXISTS(bmfw),
 	     "bmfw fixed-partition does not exist");
@@ -573,6 +586,7 @@ static void handle_cm2dm_messages(void)
 
 static void send_logs_to_smc(void)
 {
+#if defined(CONFIG_LOG_BACKEND_RINGBUF)
 	uint8_t *log_data;
 	int ret;
 
@@ -588,6 +602,10 @@ static void send_logs_to_smc(void)
 			log_backend_ringbuf_finish_claim(0);
 		}
 	}
+#else
+	/* Ringbuf backend disabled: no buffered logs to forward to SMC. */
+	return;
+#endif
 }
 
 static void shared_20ms_expired(struct k_timer *timer)

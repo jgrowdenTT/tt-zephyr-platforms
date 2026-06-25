@@ -11,6 +11,13 @@
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>
 
+#if defined(CONFIG_BOARD_TT_BH_SIM_MGMT) && defined(CONFIG_MULTI_LEVEL_INTERRUPTS)
+#include <zephyr/irq_multilevel.h>
+#include <zephyr/arch/riscv/irq.h>
+#define BH_IRQ_ENCODE(irq) (IRQ_TO_L2(irq) | RISCV_IRQ_MEXT)
+#else
+#define BH_IRQ_ENCODE(irq) (irq)
+#endif
 #include <tenstorrent/msgqueue.h>
 #include <tenstorrent/smc_msg.h>
 #include <tenstorrent/post_code.h>
@@ -94,8 +101,7 @@ static struct message_queue message_queues[NUM_MSG_QUEUES];
 /* All message handlers */
 static void *message_handlers[CONFIG_TT_BH_ARC_NUM_MSG_CODES];
 
-__attribute__((used)) static const uintptr_t message_queue_info[] = {
-	(uintptr_t)&message_queues, MSG_QUEUE_SIZE | (NUM_MSG_QUEUES << 8), 0, 0};
+__attribute__((used)) static uint32_t message_queue_info[4];
 
 static inline void *mask_voidp(void *x, uintptr_t mask)
 {
@@ -371,6 +377,12 @@ void msgqueue_register_handler(uint32_t msg_code, msgqueue_request_handler_t han
 
 static void prepare_msg_queue(void)
 {
+	/* populate message queue info for KMD (must use uint32_t; uintptr_t is 64-bit on RV64) */
+	message_queue_info[0] = (uint32_t)(uintptr_t)&message_queues;
+	message_queue_info[1] = MSG_QUEUE_SIZE | (NUM_MSG_QUEUES << 8);
+	message_queue_info[2] = 0;
+	message_queue_info[3] = 0;
+
 	/* clear message queue headers */
 	for (unsigned int i = 0; i < NUM_MSG_QUEUES; i++) {
 		memset(&message_queues[i].header, 0, sizeof(message_queues[i].header));
@@ -392,7 +404,7 @@ static int register_interrupt_handlers(void)
 SYS_INIT_APP(register_interrupt_handlers);
 #endif
 
-#ifdef CONFIG_BOARD_TT_BLACKHOLE
+#if defined(CONFIG_BOARD_TT_BLACKHOLE) || defined(CONFIG_BOARD_TT_BH_SIM_MGMT)
 static void msgqueue_work_handler(struct k_work *work)
 {
 	process_message_queues();
@@ -458,16 +470,21 @@ void init_msgqueue(void)
 {
 	prepare_msg_queue();
 
-#ifdef CONFIG_BOARD_TT_BLACKHOLE
-	IRQ_CONNECT(IRQNUM_ARC_MISC_CNTL_IRQ0, 0, msgqueue_interrupt_handler, NULL, 0);
-	irq_enable(IRQNUM_ARC_MISC_CNTL_IRQ0);
+#if defined(CONFIG_BOARD_TT_BLACKHOLE) || defined(CONFIG_BOARD_TT_BH_SIM_MGMT)
+	IRQ_CONNECT(BH_IRQ_ENCODE(IRQNUM_ARC_MISC_CNTL_IRQ0), 0, msgqueue_interrupt_handler, NULL,
+		    0);
+	irq_enable(BH_IRQ_ENCODE(IRQNUM_ARC_MISC_CNTL_IRQ0));
 
-	IRQ_CONNECT(IRQNUM_MSI_CATCHER_NONEMPTY, 0, msgqueue_msi_interrupt_handler, NULL, 0);
-	irq_enable(IRQNUM_MSI_CATCHER_NONEMPTY);
+	IRQ_CONNECT(BH_IRQ_ENCODE(IRQNUM_MSI_CATCHER_NONEMPTY), 0, msgqueue_msi_interrupt_handler,
+		    NULL, 0);
+	irq_enable(BH_IRQ_ENCODE(IRQNUM_MSI_CATCHER_NONEMPTY));
 
-	IRQ_CONNECT(IRQNUM_MSI_CATCHER_OVERFLOW, 0, msgqueue_msi_overflow_handler, NULL, 0);
-	irq_enable(IRQNUM_MSI_CATCHER_OVERFLOW);
+	IRQ_CONNECT(BH_IRQ_ENCODE(IRQNUM_MSI_CATCHER_OVERFLOW), 0, msgqueue_msi_overflow_handler,
+		    NULL, 0);
+	irq_enable(BH_IRQ_ENCODE(IRQNUM_MSI_CATCHER_OVERFLOW));
+#endif
 
+#if defined(CONFIG_BOARD_TT_BLACKHOLE) || defined(CONFIG_BOARD_TT_BH_SIM_MGMT)
 	volatile STATUS_BOOT_STATUS0_reg_u *boot_status0 =
 		(volatile STATUS_BOOT_STATUS0_reg_u *)STATUS_BOOT_STATUS0_REG_ADDR;
 	boot_status0->f.msg_queue_ready = 1;

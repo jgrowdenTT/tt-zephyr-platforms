@@ -1,0 +1,31 @@
+/*
+ * Copyright (c) 2024 Tenstorrent AI ULC
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+
+#include <qemu/virt-riscv64.dtsi>
+
+/ {
+	chosen {
+		zephyr,sram = &ram0;
+	};
+};
+
+/*
+ * Override cpu@0 to remove the C (compressed) extension.
+ * ttsim management core keeps compressed instructions disabled.
+ */
+&{/cpus/cpu@0} {
+	riscv,isa-extensions = "i", "m", "a", "zicsr", "zifencei";
+};
+
+&ram0 {
+	reg = <0x10000000 0x00080000>;
+};
+
+&uart0 {
+	status = "disabled";
+};

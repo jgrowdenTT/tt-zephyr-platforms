@@ -25,3 +25,12 @@ tests:
       - build
       - native_sim
       - build-ci
+  sample.app.tt_bh_sim_mgmt_build:
+    platform_allow:
+      - tt_bh_sim_mgmt
+    sysbuild: false
+    build_only: true
+    tags:
+      - build
+      - sim
+      - build-ci

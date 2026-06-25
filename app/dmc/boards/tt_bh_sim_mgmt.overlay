@@ -1,0 +1,85 @@
+/*
+ * Copyright (c) 2024 Tenstorrent AI ULC
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+#define DMC_VUART vuart0
+#define DMC_FLASH_DEV <&flashcontroller0>
+#define DMC_I2C emul_i2c
+
+#define TT_SIM_FLASH_SIZE 0x00010000
+
+/ {
+	chosen {
+		zephyr,flash = &flash0;
+		zephyr,flash-controller = &flashcontroller0;
+		zephyr,code-partition = &slot0_partition;
+		zephyr,console = &DMC_VUART;
+		zephyr,shell-uart = &DMC_VUART;
+	};
+
+	tt_vuarts {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		vuart0: uart_tt_virt@0 {
+			compatible = "tenstorrent,vuart";
+			version = <0x00000000>;
+			reg = <0x0>;
+			status = "okay";
+		};
+	};
+
+	flashcontroller0: flash-controller@0 {
+		compatible = "zephyr,sim-flash";
+		reg = <0x00000000 TT_SIM_FLASH_SIZE>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+		erase-value = <0xff>;
+
+		flash0: flash@0 {
+			status = "okay";
+			compatible = "soc-nv-flash";
+			erase-block-size = <4096>;
+			write-block-size = <1>;
+			reg = <0x00000000 TT_SIM_FLASH_SIZE>;
+
+			partitions {
+				compatible = "fixed-partitions";
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				boot_partition: partition@0 {
+					label = "mcuboot";
+					reg = <0x00000000 0x00002000>;
+				};
+
+				slot0_partition: partition@2000 {
+					label = "image-0";
+					reg = <0x00002000 0x00008000>;
+				};
+
+				slot1_partition: partition@a000 {
+					label = "image-1";
+					reg = <0x0000a000 0x00004000>;
+				};
+
+				scratch_partition: partition@e000 {
+					label = "image-scratch";
+					reg = <0x0000e000 0x00001000>;
+				};
+
+				storage_partition: partition@f000 {
+					label = "storage";
+					reg = <0x0000f000 0x00001000>;
+				};
+			};
+		};
+	};
+};
+
+#include "dmc_common.dtsi"

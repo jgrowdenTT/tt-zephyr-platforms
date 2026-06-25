@@ -1,0 +1,6 @@
+board:
+  name: tt_bh_sim_mgmt
+  full_name: Tenstorrent Blackhole Management RV64 (ttsim)
+  vendor: tenstorrent
+  socs:
+    - name: qemu_virt_riscv64
