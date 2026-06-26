@@ -1,0 +1,12 @@
+common:
+  tags:
+    - pldm
+    - mctp
+    - dmc
+  platform_allow:
+    - nucleo_u385rg_q
+  integration_platforms:
+    - nucleo_u385rg_q
+
+tests:
+  drivers.pldm.nucleo: {}

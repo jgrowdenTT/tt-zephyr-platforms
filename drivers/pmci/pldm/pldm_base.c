@@ -253,7 +253,7 @@ int pldm_base_build_response(uint8_t *tid, const struct device *mctp_dev,
 	ARG_UNUSED(mctp_dev);
 	const struct device *oem_handler = NULL;
 #else
-	const struct device *oem_handler = pldm_mctp_responder_oem_handler_get(mctp_dev);
+	const struct device *oem_handler = tt_pldm_mctp_responder_oem_handler_get(mctp_dev);
 #endif
 
 	switch (req_hdr->command) {

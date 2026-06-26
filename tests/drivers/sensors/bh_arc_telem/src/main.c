@@ -28,6 +28,19 @@ RTIO_DEFINE(test_rtio, 2, 2);
 #define TELEM_REFRESH_MS      100
 #define TELEM_TOLERANCE_MICRO 300000 /* ±300mK tolerance for float conversions */
 
+static int q31_to_sensor_value(const struct sensor_q31_data *q31, struct sensor_value *value)
+{
+	int64_t reading_micro;
+
+	if (q31->header.reading_count == 0U || q31->shift > 31) {
+		return -ENODATA;
+	}
+
+	reading_micro = ((int64_t)q31->readings[0].value * 1000000LL) >> (31 - q31->shift);
+
+	return sensor_value_from_micro(value, reading_micro);
+}
+
 static void set_emulated_temp_and_wait(float temp_c)
 {
 	int rc = pvt_tt_bh_emul_set_ts_raw(pvt_tt_bh_temp_to_raw(temp_c));
@@ -44,6 +57,7 @@ static int read_channel(const struct rtio_iodev *iodev, enum sensor_channel chan
 		.chan_type = channel_type,
 		.chan_idx = channel_index,
 	};
+	struct sensor_q31_data q31 = {0};
 	uint8_t read_buf[64];
 	size_t base_size;
 	size_t frame_size;
@@ -71,12 +85,12 @@ static int read_channel(const struct rtio_iodev *iodev, enum sensor_channel chan
 	struct sensor_decode_context decode_ctx =
 		SENSOR_DECODE_CONTEXT_INIT(decoder, read_buf, channel_type, channel_index);
 
-	rc = sensor_decode(&decode_ctx, value, 1U);
+	rc = sensor_decode(&decode_ctx, &q31, 1U);
 	if (rc <= 0) {
 		return (rc < 0) ? rc : -ENODATA;
 	}
 
-	return 0;
+	return q31_to_sensor_value(&q31, value);
 }
 
 static void *bh_arc_telem_setup(void)
@@ -180,8 +194,8 @@ ZTEST(bh_arc_telem, test_decode_multi_channel_progresses_fit)
 		.chan_type = SENSOR_CHAN_POWER,
 		.chan_idx = 0,
 	};
-	struct sensor_value temp_value;
-	struct sensor_value power_value;
+	struct sensor_q31_data temp_value = {0};
+	struct sensor_q31_data power_value = {0};
 	size_t base_size;
 	size_t frame_size;
 	uint8_t read_buf[128];
