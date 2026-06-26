@@ -1,0 +1,37 @@
+/*
+ * Copyright (c) 2026 Intel Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include "../../../../../app/dmc/boards/nucleo_u385rg_q.overlay"
+
+&i2c2 {
+	status = "disabled";
+};
+
+&i3c2 {
+	zephyr,deferred-init;
+	pinctrl-0 = <&i3c2_scl_pb10 &i3c2_sda_pb14>;
+	pinctrl-names = "default";
+	status = "okay";
+	i3c-scl-hz = <1000000>;
+	i2c-scl-hz = <400000>;
+
+	mctp_endpoint0: mctp_endpoint0@20813818000 {
+		zephyr,deferred-init;
+		compatible = "zephyr,mctp-i3c-endpoint";
+		reg = <0x0000 0x0208 0x13818000>;
+		status = "okay";
+	};
+};
+
+/ {
+	mctp_i3c: mctp_i3c {
+		compatible = "zephyr,mctp-i3c-controller";
+		endpoints = <&mctp_endpoint0>;
+		endpoint-ids = <11>;
+	};
+};
+
+i3c_controller: &i3c2 {};

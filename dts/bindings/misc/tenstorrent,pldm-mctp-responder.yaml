@@ -1,0 +1,27 @@
+# Copyright (c) 2026 Tenstorrent AI ULC
+# SPDX-License-Identifier: Apache-2.0
+
+description: Tenstorrent PLDM responder over MCTP I3C target transport
+
+compatible: "tenstorrent,pldm-mctp-responder"
+
+include: base.yaml
+
+properties:
+  mctp-target:
+    type: phandle
+    required: true
+    description: Phandle to a zephyr,mctp-i3c-target node
+
+  pdr:
+    type: phandle
+    description: Optional phandle to a tenstorrent,pldm-pdr node
+
+  oem-handler:
+    type: phandle
+    description: Optional phandle to a tenstorrent,pldm-oem-handler node
+
+  pldm-tid:
+    type: int
+    default: 11
+    description: PLDM terminus ID reported by GetTID

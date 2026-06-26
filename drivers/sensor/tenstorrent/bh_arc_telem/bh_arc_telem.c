@@ -18,6 +18,7 @@
 #include <tenstorrent/tt_smbus_regs.h>
 
 #include <errno.h>
+#include <limits.h>
 
 #include <telemetry.h>
 
@@ -46,27 +47,49 @@ struct bh_arc_telem_rtio_data {
 	uint32_t raw;
 };
 
-static int bh_arc_telem_raw_to_sensor_value(uint8_t telem_tag, int32_t scale_micro, uint32_t raw,
-					    struct sensor_value *val)
+static int bh_arc_telem_raw_to_micro(uint8_t telem_tag, int32_t scale_micro, uint32_t raw,
+				     int64_t *micro)
 {
 	int32_t signed_raw;
 	int64_t scaled;
 
-	if (val == NULL) {
+	if (micro == NULL) {
 		return -EINVAL;
 	}
 
 	if (telem_tag == TAG_ASIC_TEMPERATURE) {
 		signed_raw = (int32_t)raw;
-		val->val1 = signed_raw / 65536;
-		val->val2 = (int32_t)(((int64_t)(signed_raw % 65536) * 1000000LL) / 65536LL);
+		*micro = ((int64_t)signed_raw * 1000000LL) / 65536LL;
 		return 0;
 	}
 
 	scaled = (int64_t)(int32_t)raw * scale_micro;
-	val->val1 = (int32_t)(scaled / 1000000LL);
-	val->val2 = (int32_t)(scaled % 1000000LL);
+	*micro = scaled;
 
+	return 0;
+}
+
+static int bh_arc_telem_micro_to_q31(int64_t micro, q31_t *value, int8_t *shift)
+{
+	int8_t selected_shift = 0;
+	int64_t magnitude = (micro < 0) ? -micro : micro;
+	int64_t scaled;
+
+	if (value == NULL || shift == NULL) {
+		return -EINVAL;
+	}
+
+	while (selected_shift < 30 && magnitude >= (1LL << selected_shift) * 1000000LL) {
+		selected_shift++;
+	}
+
+	scaled = (micro * (1LL << (31 - selected_shift))) / 1000000LL;
+	if (scaled > INT32_MAX || scaled < INT32_MIN) {
+		return -ERANGE;
+	}
+
+	*value = (q31_t)scaled;
+	*shift = selected_shift;
 	return 0;
 }
 
@@ -156,7 +179,7 @@ static int bh_arc_telem_decoder_get_size_info(struct sensor_chan_spec channel, s
 static int bh_arc_telem_decoder_decode(const uint8_t *buffer, struct sensor_chan_spec chan_spec,
 				       uint32_t *fit, uint16_t max_count, void *data_out)
 {
-	struct sensor_value *out = data_out;
+	struct sensor_q31_data *out = data_out;
 	const struct bh_arc_telem_rtio_data *samples =
 		(const struct bh_arc_telem_rtio_data *)buffer;
 	int ret;
@@ -174,8 +197,17 @@ static int bh_arc_telem_decoder_decode(const uint8_t *buffer, struct sensor_chan
 			continue;
 		}
 
-		ret = bh_arc_telem_raw_to_sensor_value(samples[i].telem_tag, samples[i].scale_micro,
-						       samples[i].raw, out);
+		int64_t micro;
+
+		ret = bh_arc_telem_raw_to_micro(samples[i].telem_tag, samples[i].scale_micro,
+						samples[i].raw, &micro);
+		if (ret == 0) {
+			out->header.reading_count = 1U;
+			out->header.base_timestamp_ns = 0U;
+			out->readings[0].timestamp_delta = 0U;
+			ret = bh_arc_telem_micro_to_q31(micro, &out->readings[0].value,
+							&out->shift);
+		}
 		if (ret != 0) {
 			return ret;
 		}

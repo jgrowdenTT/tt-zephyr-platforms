@@ -251,23 +251,14 @@ static int pldm_sensor_read_decode(const struct pldm_pdr_numeric_sensor_desc *se
 		return (rc < 0) ? rc : -ENODATA;
 	}
 
-	if (q31_data.header.reading_count == 0U) {
+	if (q31_data.header.reading_count == 0U || q31_data.shift > 31) {
 		return -ENODATA;
-	}
-
-	if (q31_data.shift > 31) {
-		return -ERANGE;
 	}
 
 	int64_t reading_micro =
 		((int64_t)q31_data.readings[0].value * 1000000LL) >> (31 - q31_data.shift);
 
-	rc = sensor_value_from_micro(sensor_value, reading_micro);
-	if (rc != 0) {
-		return rc;
-	}
-
-	return 0;
+	return sensor_value_from_micro(sensor_value, reading_micro);
 }
 
 static int pldm_handle_get_sensor_reading(const struct device *pdr_dev,

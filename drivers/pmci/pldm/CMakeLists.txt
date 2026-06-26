@@ -3,6 +3,7 @@
 zephyr_library()
 
 zephyr_library_sources_ifdef(CONFIG_PMCI_PLDM_PLATFORM pldm_platform.c)
+zephyr_library_sources_ifdef(CONFIG_TT_PMCI_PLDM_MCTP_RESPONDER pldm_mctp_responder.c)
 zephyr_library_sources_ifdef(CONFIG_PMCI_PLDM_BASE pldm_base.c)
 zephyr_library_sources_ifdef(CONFIG_PMCI_PLDM_PLATFORM pldm_pdr.c)
 zephyr_library_sources_ifdef(CONFIG_TT_PMCI_PLDM_SHELL tt_pldm_oem.c)

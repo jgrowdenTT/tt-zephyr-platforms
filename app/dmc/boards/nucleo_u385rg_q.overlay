@@ -8,3 +8,57 @@
 #define DMC_FLASH_DEV <&{/soc/flash-controller@40022000}>
 
 #include "dmc_common.dtsi"
+
+/* Include test sensor IDs for now. */
+#include "../../../tests/drivers/pmci/pldm/include/tt_test_pldm_sensor_ids.h"
+
+/* I3C1 target-side PLDM/MCTP configuration */
+&i3c1 {
+	pinctrl-0 = <&i3c1_scl_pb2 &i3c1_sda_pc1>;
+	pinctrl-names = "default";
+	status = "okay";
+	target-mode;
+	mipi-instance = <0x8>;
+};
+
+/ {
+	mctp_i3c_target: mctp_i3c_target {
+		compatible = "zephyr,mctp-i3c-target";
+		i3c = <&i3c1>;
+		endpoint-id = <11>;
+	};
+
+	pldm_mctp_responder: pldm_mctp_responder {
+		compatible = "tenstorrent,pldm-mctp-responder";
+		mctp-target = <&mctp_i3c_target>;
+		pdr = <&pldm_pdr>;
+		oem-handler = <&pldm_shell>;
+	};
+
+	pldm_shell: pldm_shell {
+		compatible = "tenstorrent,pldm-oem-handler";
+		status = "okay";
+	};
+
+	pldm_pdr: pldm_pdr {
+		compatible = "tenstorrent,pldm-pdr";
+		status = "okay";
+
+		asic_temp: asic_temp {
+			compatible = "tenstorrent,pldm-numeric-sensor";
+			sensor = <&smc_sensor>;
+			channel-type = <12>;
+			channel-index = <0>;
+			sensor-id = <BH_PLDM_SENSOR_ID_ASIC_TEMP>;
+			unit-modifier = <(-1)>;
+		};
+
+		tdp: tdp {
+			compatible = "tenstorrent,pldm-numeric-sensor";
+			sensor = <&smc_sensor>;
+			channel-type = <45>;
+			channel-index = <0>;
+			sensor-id = <BH_PLDM_SENSOR_ID_TDP>;
+		};
+	};
+};

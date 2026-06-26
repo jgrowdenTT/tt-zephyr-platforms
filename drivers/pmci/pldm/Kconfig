@@ -30,3 +30,14 @@ config TT_PMCI_PLDM_SHELL
 	  Enable an OEM PLDM command set that executes shell commands through
 	  Zephyr shell APIs and returns captured output over MCTP/PLDM.
 	  This is intended for bring-up and debug images.
+
+config TT_PMCI_PLDM_MCTP_RESPONDER
+	bool "Tenstorrent PLDM responder over MCTP"
+	depends on DT_HAS_TENSTORRENT_PLDM_MCTP_RESPONDER_ENABLED
+	depends on MCTP && PLDM && MCTP_I3C_TARGET
+	select PMCI_PLDM_BASE
+	select PMCI_PLDM_PLATFORM
+	help
+	  Enable Tenstorrent PLDM responder over an MCTP I3C target transport.
+	  The driver consumes PLDM messages and emits responses for supported
+	  PLDM Base and Platform commands.
