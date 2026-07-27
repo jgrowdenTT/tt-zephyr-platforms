@@ -85,7 +85,6 @@ static struct i3c_target_config i3c_target_config = {
 
 #endif
 
-
 #if DT_NODE_EXISTS(DT_NODELABEL(max7221))
 /*
  * POST-code display on the MAX7221 (U67) driving two LDQ-N514RI 4-digit
@@ -100,33 +99,33 @@ static struct i3c_target_config i3c_target_config = {
 #define MAX7221_REG_DIGIT0 0x01
 
 /* No-decode segment mapping (datasheet Table 6): D7=DP, D6..D0 = A,B,C,D,E,F,G */
-#define SEG_A 0x40
-#define SEG_B 0x20
-#define SEG_C 0x10
-#define SEG_D 0x08
-#define SEG_E 0x04
-#define SEG_F 0x02
-#define SEG_G 0x01
+#define SEG_A  0x40
+#define SEG_B  0x20
+#define SEG_C  0x10
+#define SEG_D  0x08
+#define SEG_E  0x04
+#define SEG_F  0x02
+#define SEG_G  0x01
 #define SEG_DP 0x80
 
 /* Hex font 0-F. */
 static const uint8_t post_font_hex[16] = {
-	SEG_A | SEG_B | SEG_C | SEG_D | SEG_E | SEG_F,          /* 0 */
-	SEG_B | SEG_C,                                          /* 1 */
-	SEG_A | SEG_B | SEG_D | SEG_E | SEG_G,                  /* 2 */
-	SEG_A | SEG_B | SEG_C | SEG_D | SEG_G,                  /* 3 */
-	SEG_B | SEG_C | SEG_F | SEG_G,                          /* 4 */
-	SEG_A | SEG_C | SEG_D | SEG_F | SEG_G,                  /* 5 */
-	SEG_A | SEG_C | SEG_D | SEG_E | SEG_F | SEG_G,          /* 6 */
-	SEG_A | SEG_B | SEG_C,                                  /* 7 */
-	SEG_A | SEG_B | SEG_C | SEG_D | SEG_E | SEG_F | SEG_G,  /* 8 */
-	SEG_A | SEG_B | SEG_C | SEG_D | SEG_F | SEG_G,          /* 9 */
-	SEG_A | SEG_B | SEG_C | SEG_E | SEG_F | SEG_G,          /* A */
-	SEG_C | SEG_D | SEG_E | SEG_F | SEG_G,                  /* b */
-	SEG_A | SEG_D | SEG_E | SEG_F,                          /* C */
-	SEG_B | SEG_C | SEG_D | SEG_E | SEG_G,                  /* d */
-	SEG_A | SEG_D | SEG_E | SEG_F | SEG_G,                  /* E */
-	SEG_A | SEG_E | SEG_F | SEG_G,                          /* F */
+	SEG_A | SEG_B | SEG_C | SEG_D | SEG_E | SEG_F,         /* 0 */
+	SEG_B | SEG_C,                                         /* 1 */
+	SEG_A | SEG_B | SEG_D | SEG_E | SEG_G,                 /* 2 */
+	SEG_A | SEG_B | SEG_C | SEG_D | SEG_G,                 /* 3 */
+	SEG_B | SEG_C | SEG_F | SEG_G,                         /* 4 */
+	SEG_A | SEG_C | SEG_D | SEG_F | SEG_G,                 /* 5 */
+	SEG_A | SEG_C | SEG_D | SEG_E | SEG_F | SEG_G,         /* 6 */
+	SEG_A | SEG_B | SEG_C,                                 /* 7 */
+	SEG_A | SEG_B | SEG_C | SEG_D | SEG_E | SEG_F | SEG_G, /* 8 */
+	SEG_A | SEG_B | SEG_C | SEG_D | SEG_F | SEG_G,         /* 9 */
+	SEG_A | SEG_B | SEG_C | SEG_E | SEG_F | SEG_G,         /* A */
+	SEG_C | SEG_D | SEG_E | SEG_F | SEG_G,                 /* b */
+	SEG_A | SEG_D | SEG_E | SEG_F,                         /* C */
+	SEG_B | SEG_C | SEG_D | SEG_E | SEG_G,                 /* d */
+	SEG_A | SEG_D | SEG_E | SEG_F | SEG_G,                 /* E */
+	SEG_A | SEG_E | SEG_F | SEG_G,                         /* F */
 };
 
 /* Letters used by the "POST" banner. */
@@ -136,7 +135,7 @@ static const uint8_t post_font_hex[16] = {
 #define GLYPH_T (SEG_D | SEG_E | SEG_F | SEG_G)
 
 static const struct spi_dt_spec max7221_spi =
-	SPI_DT_SPEC_GET(DT_NODELABEL(max7221), SPI_WORD_SET(8) | SPI_OP_MODE_MASTER, 0);
+	SPI_DT_SPEC_GET(DT_NODELABEL(max7221), SPI_WORD_SET(8) | SPI_OP_MODE_MASTER);
 
 static int max7221_write(uint8_t reg, uint8_t val)
 {
@@ -182,10 +181,13 @@ static int post_display_positions(const uint8_t pos_segs[8])
 }
 
 /* Show "POST" then a 4-digit hex code, in reading order. */
-int post_code_show(uint16_t code)
+static int post_code_show(uint16_t code)
 {
 	const uint8_t pos_segs[8] = {
-		GLYPH_P, GLYPH_O, GLYPH_S, GLYPH_T,
+		GLYPH_P,
+		GLYPH_O,
+		GLYPH_S,
+		GLYPH_T,
 		post_font_hex[(code >> 12) & 0xF],
 		post_font_hex[(code >> 8) & 0xF],
 		post_font_hex[(code >> 4) & 0xF],
