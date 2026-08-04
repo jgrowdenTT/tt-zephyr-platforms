@@ -20,3 +20,13 @@ config PMCI_PLDM_BASE
 	depends on PLDM
 	help
 	  Enable PLDM BASE support
+
+config TT_PMCI_PLDM_SHELL
+	bool "Enable PLDM OEM shell bridge"
+	depends on SHELL
+	depends on PMCI_PLDM_OEM
+	select SHELL_BACKEND_DUMMY
+	help
+	  Enable an OEM PLDM command set that executes shell commands through
+	  Zephyr shell APIs and returns captured output over MCTP/PLDM.
+	  This is intended for bring-up and debug images.
