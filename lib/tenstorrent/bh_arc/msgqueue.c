@@ -101,8 +101,7 @@ static struct message_queue message_queues[NUM_MSG_QUEUES];
 /* All message handlers */
 static void *message_handlers[CONFIG_TT_BH_ARC_NUM_MSG_CODES];
 
-__attribute__((used)) static const uintptr_t message_queue_info[] = {
-	(uintptr_t)&message_queues, MSG_QUEUE_SIZE | (NUM_MSG_QUEUES << 8), 0, 0};
+__attribute__((used)) static uint32_t message_queue_info[4];
 
 static inline void *mask_voidp(void *x, uintptr_t mask)
 {
@@ -378,13 +377,19 @@ void msgqueue_register_handler(uint32_t msg_code, msgqueue_request_handler_t han
 
 static void prepare_msg_queue(void)
 {
+	/* populate message queue info for KMD (must use uint32_t; uintptr_t is 64-bit on RV64) */
+	message_queue_info[0] = (uint32_t)(uintptr_t)&message_queues;
+	message_queue_info[1] = MSG_QUEUE_SIZE | (NUM_MSG_QUEUES << 8);
+	message_queue_info[2] = 0;
+	message_queue_info[3] = 0;
+
 	/* clear message queue headers */
 	for (unsigned int i = 0; i < NUM_MSG_QUEUES; i++) {
 		memset(&message_queues[i].header, 0, sizeof(message_queues[i].header));
 	}
 
 	/* populate address of message queue info */
-	WriteReg(STATUS_MSG_Q_INFO_REG_ADDR, (uint32_t)message_queue_info);
+	WriteReg(STATUS_MSG_Q_INFO_REG_ADDR, (uintptr_t)message_queue_info);
 }
 
 #ifndef MSG_QUEUE_TEST
