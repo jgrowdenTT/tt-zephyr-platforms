@@ -108,6 +108,7 @@ jobs:
         if: >-
           ${{ failure()
           && matrix.config.board != 'bh-galaxy'
+          && matrix.config.board != 'bh-galaxy-revc'
           && matrix.config.board != 'loudbox'
           && matrix.config.board != 'quietbox2' }}
         working-directory: tt-system-firmware
