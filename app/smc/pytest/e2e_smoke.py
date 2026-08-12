@@ -345,6 +345,8 @@ def upgrade_from_version_test(
 ):
     if board_name is None:
         pytest.skip("Upgrade test requires --board set, skipping upgrade test")
+    if board_name == "bh-galaxy-revc":
+        pytest.skip("Upgrade test is not supported on Galaxy revc")
 
     RECOVERY_URL = "https://github.com/tenstorrent/tt-system-firmware/releases/download/v18.12.2/fw-pack-v18.12.2-recovery.tar.gz"
 
