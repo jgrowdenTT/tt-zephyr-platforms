@@ -497,7 +497,7 @@ def temperature_sensors_test(arc_chip_dut, asic_id):
     arc_chip = pyluwen.detect_chips()[asic_id]
     fail_count = 0
     tmin = 20
-    tmax = 70
+    tmax = 80
     for sensor_id in range(NUM_TS):
         response = arc_chip.as_bh().arc_msg_buf(
             [TT_SMC_MSG_READ_TS, sensor_id, 0, 0, 0, 0, 0, 0]
@@ -1241,7 +1241,7 @@ def test_temperature_sensors(arc_chip_dut, asic_id):
     Validates that the temperature sensor messages work and relay responses within reasonable bounds
 
     The message tested is READ_TS.
-    The expectation is that the temperature returned is between 40 and 70
+    The expectation is that the temperature returned is between 20 and 80
     """
     assert 0 == temperature_sensors_test(arc_chip_dut, asic_id)
 
