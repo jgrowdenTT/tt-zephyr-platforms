@@ -50,8 +50,9 @@
       "metal-options": "--cap-add SYS_MODULE --device /dev/tenstorrent --user=root",
       "kmd_build": "2.10.0"
     },
+
     {
-      "board": "bh-galaxy",
+      "board": "bh-galaxy-revc",
       "metal-image": "ghcr.io/tenstorrent/tt-metal/upstream-tests-bh-glx:v0.74.0",
       "metal-target": "blackhole_glx",
       "arch-name": "blackhole",
