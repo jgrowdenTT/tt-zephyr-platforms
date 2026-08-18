@@ -313,8 +313,9 @@ static void tt_grendel_mbox_isr(const struct device *dev, mbox_channel_id_t chan
 	};                                                                                         \
                                                                                                    \
 	static mbox_callback_t                                                                     \
-		tt_grendel_mbox_callbacks_##inst[DT_INST_PROP(inst, channel_pairs)];               \
-	static void *tt_grendel_mbox_callback_user_data_##inst[DT_INST_PROP(inst, channel_pairs)]; \
+		tt_grendel_mbox_callbacks_##inst[DT_INST_PROP(inst, channel_pairs) * 2];           \
+	static void                                                                                \
+		*tt_grendel_mbox_callback_user_data_##inst[DT_INST_PROP(inst, channel_pairs) * 2]; \
                                                                                                    \
 	static struct tt_grendel_mbox_data tt_grendel_mbox_data_##inst = {                         \
 		.callbacks = tt_grendel_mbox_callbacks_##inst,                                     \
