@@ -14,7 +14,7 @@
 
 #include <soc.h>
 
-#define SMC_SRAM_OCCP_BASE 0xc0066400 /* Start of SMC RAM scratch region */
+#define SMC_SRAM_OCCP_BASE 0xc0067000 /* Start of SMC RAM scratch region, 4K aligned */
 
 const struct device *smc_dev = DEVICE_DT_GET(DT_NODELABEL(remoteproc));
 

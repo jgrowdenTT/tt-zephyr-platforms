@@ -103,9 +103,10 @@
 	};
 
 	/* note: ram0-ram7 are separated into 128KB regions */
-	ram0: memory@c0060000 {
+	/* Base is rounded up to 4K to satisfy CONFIG_PMP_GRANULARITY. */
+	ram0: memory@c0067000 {
 		device_type = "memory";
-		reg = <0x0 0xc0060000 0x0 0x100000>;
+		reg = <0x0 0xc0067000 0x0 0xf4000>;
 	};
 
 	soc {
