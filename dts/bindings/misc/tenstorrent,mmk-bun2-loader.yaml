@@ -1,0 +1,36 @@
+# Copyright (c) 2026 Tenstorrent AI ULC
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  Tenstorrent MMK BUN2 (host-staged) FW bundle loader.
+
+  Drives the host handshake used to stage and validate the FW bundle used to boot the SMC:
+    1. Set the host boot state register to WAIT_FOR_BUNDLE.
+    2. Poll the host boot state register for BUNDLE_STAGED.
+    3. Close host access to the staging region.
+    4. Set the bundle validation register's BUNDLE_READY_FOR_VALIDATION bit.
+    5. Poll the bundle validation register for its BUNDLE_VALIDATED bit.
+    6. Copy the SMC BL1 image out of the staged bundle to its execution address and jump to it.
+
+compatible: "tenstorrent,mmk-bun2-loader"
+
+include: base.yaml
+
+properties:
+  reg:
+    required: true
+    description: |
+      The BUN2 staging area. The host writes the FW bundle payload (manifest, TOC and images)
+      here before requesting validation.
+
+  host-boot-state:
+    type: phandle
+    required: true
+    description: |
+      tenstorrent,scratch-reg node used for the host boot state handshake (K-SMC SCRATCH[12]).
+
+  bundle-validation:
+    type: phandle
+    required: true
+    description: |
+      tenstorrent,scratch-reg node used for the bundle validation handshake (K-SMC SCRATCH[10]).

@@ -1,0 +1,38 @@
+# Copyright (c) 2026 Tenstorrent AI ULC
+# SPDX-License-Identifier: Apache-2.0
+
+config TT_BUNDLE_LOADER
+	bool "Tenstorrent SMC FW Bundle Loader Remote Driver"
+	default n
+	help
+	  Enable the Bundle Loader driver for the Tenstorrent SMC platform.
+
+if TT_BUNDLE_LOADER
+module = TT_BUNDLE_LOADER
+module-str = tt_bundle_loader
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # TT_BUNDLE_LOADER
+
+config TT_MMK_BUN2_LOADER
+	bool "Tenstorrent MMK BUN2 (host-staged) FW Bundle Loader"
+	default y
+	select TT_BUNDLE_LOADER
+	depends on DT_HAS_TENSTORRENT_MMK_BUN2_LOADER_ENABLED
+	help
+	  Enable the BUN2 (host-staged) FW bundle loader driver for the Tenstorrent MMK SMC
+	  platform.
+
+if TT_MMK_BUN2_LOADER
+
+config TT_MMK_BUN2_LOADER_INIT_PRIO
+	int
+	default 76
+	help
+	  Set the initialization priority of the Tenstorrent MMK BUN2 loader driver.
+
+module = TT_MMK_BUN2_LOADER
+module-str = tt_mmk_bun2_loader
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # TT_MMK_BUN2_LOADER
