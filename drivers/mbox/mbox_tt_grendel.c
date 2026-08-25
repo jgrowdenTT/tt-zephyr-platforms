@@ -117,7 +117,7 @@ LOG_MODULE_REGISTER(mbox_tt_grendel, CONFIG_MBOX_LOG_LEVEL);
 
 struct tt_grendel_mbox_config {
 	void (*irq_config_func)(const struct device *dev);
-	uint32_t base_addr;
+	uint64_t base_addr;
 	uint8_t channel_pairs;
 };
 
@@ -141,7 +141,13 @@ static uint32_t tt_grendel_mbox_max_channels_get(const struct device *dev)
 static int tt_grendel_mbox_register_callback(const struct device *dev, mbox_channel_id_t channel_id,
 					     mbox_callback_t cb, void *user_data)
 {
+	const struct tt_grendel_mbox_config *cfg = dev->config;
 	struct tt_grendel_mbox_data *data = dev->data;
+
+	if (cfg->irq_config_func == NULL) {
+		LOG_ERR("%s: Device has no interrupts, cannot register callback", dev->name);
+		return -ENOTSUP;
+	}
 
 	if (channel_id >= tt_grendel_mbox_max_channels_get(dev)) {
 		LOG_ERR("%s: Invalid channel ID %d, max is %d", __func__, channel_id,
@@ -197,6 +203,11 @@ static int tt_grendel_mbox_set_enabled(const struct device *dev, mbox_channel_id
 	const struct tt_grendel_mbox_config *cfg = dev->config;
 	SMC_MAILBOX_IRQEN_reg_u irqen;
 
+	if (cfg->irq_config_func == NULL) {
+		LOG_ERR("%s: Device has no interrupts, cannot enable/disable channel", dev->name);
+		return -ENOTSUP;
+	}
+
 	if (channel_id >= tt_grendel_mbox_max_channels_get(dev)) {
 		LOG_ERR("%s: Invalid channel ID %d, max is %d", __func__, channel_id,
 			tt_grendel_mbox_max_channels_get(dev) - 1);
@@ -223,6 +234,15 @@ static int tt_grendel_mbox_init(const struct device *dev)
 {
 	const struct tt_grendel_mbox_config *cfg = dev->config;
 	SMC_CPU_CTRL_RESET_CTRL_reg_u reset_ctrl;
+
+	if (cfg->irq_config_func == NULL) {
+		/*
+		 * Remote view of another die's mailbox (e.g. SPA-mapped), which doesn't own the
+		 * hardware. Skip local reset control and per-channel IRQ/threshold clearing so we
+		 * don't clobber state the owning die has already configured.
+		 */
+		return 0;
+	}
 
 	/* Clear mailbox reset */
 	reset_ctrl.val = sys_read32(SMC_CPU_SMC_CPU_CTRL_RESET_CTRL_REG_ADDR);
@@ -294,22 +314,30 @@ static void tt_grendel_mbox_isr(const struct device *dev, mbox_channel_id_t chan
 		    tt_grendel_mbox_isr_##channel_id, DEVICE_DT_INST_GET(inst), 0);                \
 	irq_enable(DT_INST_IRQN_BY_IDX(inst, channel_id));
 
-#define TT_GRENDEL_MBOX_DEFINE(inst)                                                               \
+#define TT_GRENDEL_MBOX_IRQ_CONFIG_FUNC_NAME(inst) tt_grendel_mbox_irq_config_func_##inst
+
+#define TT_GRENDEL_MBOX_IRQ_CONFIG_FUNC_DEFINE(inst)                                               \
 	LISTIFY(DT_INST_PROP(inst, channel_pairs), \
 		TT_GRENDEL_MBOX_CHANNEL_IRQ_HANDLER_DEFINE, \
 		(;))                                               \
                                                                                                    \
-	static void tt_grendel_mbox_irq_config_func_##inst(const struct device *dev)               \
+	static void TT_GRENDEL_MBOX_IRQ_CONFIG_FUNC_NAME(inst)(const struct device *dev)           \
 	{                                                                                          \
 		ARG_UNUSED(dev);                                                                   \
 		LISTIFY(DT_INST_PROP(inst, channel_pairs), \
 			TT_GRENDEL_MBOX_CHANNEL_IRQ_HANDLER_CONNECT, (;), inst);        \
-	}                                                                                          \
+	}
+
+/* clang-format off */
+#define TT_GRENDEL_MBOX_DEFINE(inst)                                                               \
+	COND_CODE_1(DT_INST_NODE_HAS_PROP(inst, interrupts),                                       \
+		    (TT_GRENDEL_MBOX_IRQ_CONFIG_FUNC_DEFINE(inst)), ())                            \
                                                                                                    \
 	static const struct tt_grendel_mbox_config tt_grendel_mbox_config_##inst = {               \
-		.irq_config_func = tt_grendel_mbox_irq_config_func_##inst,                         \
-		.base_addr = DT_INST_REG_ADDR(inst),                                               \
-		.channel_pairs = DT_INST_PROP(inst, channel_pairs),                                \
+		.irq_config_func = COND_CODE_1(DT_INST_NODE_HAS_PROP(inst, interrupts),            \
+			(TT_GRENDEL_MBOX_IRQ_CONFIG_FUNC_NAME(inst)), (NULL)),                     \
+			 .base_addr = DT_INST_REG_ADDR(inst),                                      \
+			 .channel_pairs = DT_INST_PROP(inst, channel_pairs),                       \
 	};                                                                                         \
                                                                                                    \
 	static mbox_callback_t                                                                     \
@@ -326,4 +354,5 @@ static void tt_grendel_mbox_isr(const struct device *dev, mbox_channel_id_t chan
 			      &tt_grendel_mbox_config_##inst, POST_KERNEL,                         \
 			      CONFIG_MBOX_INIT_PRIORITY, &tt_grendel_mbox_api);
 
+/* clang-format on */
 DT_INST_FOREACH_STATUS_OKAY(TT_GRENDEL_MBOX_DEFINE)

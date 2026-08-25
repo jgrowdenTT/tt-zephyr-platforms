@@ -12,7 +12,10 @@ properties:
     required: true
 
   interrupts:
-    required: true
+    description: |
+      Required for instances that receive on inbound channels. Instances that
+      only ever send (e.g. a remote view of another die's mailbox registers)
+      may omit interrupts entirely.
 
   channel-pairs:
     type: int
