@@ -71,12 +71,27 @@ jobs:
             console.log(`Total artifacts found: ${artifacts.data.artifacts.length}`);
 
             for (const artifact of artifacts.data.artifacts) {
-              const download = await github.rest.actions.downloadArtifact({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                artifact_id: artifact.id,
-                archive_format: 'zip'
-              });
+              if (artifact.expired) {
+                console.log(`Skipping artifact ${artifact.id}, expired`);
+                continue;
+              }
+
+              let download;
+              try {
+                download = await github.rest.actions.downloadArtifact({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  artifact_id: artifact.id,
+                  archive_format: 'zip'
+                });
+              } catch (error) {
+                if (error.status === 410) {
+                  // Handles race where artifact expires after artifacts cache but before download
+                  console.log(`Skipping artifact ${artifact.id}, expired`);
+                  continue;
+                }
+                throw error;
+              }
 
               const fname = `${artifact.name}-${artifact.id}-${artifact.workflow_run.head_sha}.zip`;
               fs.writeFileSync(fname, Buffer.from(download.data));
