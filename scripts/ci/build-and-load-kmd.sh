@@ -9,13 +9,20 @@
 
 set -euo pipefail
 
-if [ $# -ne 1 ] || [ -z "$1" ]; then
-	echo "Usage: $(basename "$0") <kmd-version>" >&2
+if [ $# -lt 1 ] || [ $# -gt 2 ] || [ -z "$1" ]; then
+	echo "Usage: $(basename "$0") <kmd-version> [--force]" >&2
 	echo "Example: $(basename "$0") 2.10.0" >&2
 	exit 1
 fi
 
 KMD_VERSION="$1"
+FORCE=0
+if [ "${2:-}" = "--force" ]; then
+	FORCE=1
+elif [ -n "${2:-}" ]; then
+	echo "Usage: $(basename "$0") <kmd-version> [--force]" >&2
+	exit 1
+fi
 KMD_TAG="ttkmd-${KMD_VERSION}"
 KVER="$(uname -r)"
 KMD_REPO="${KMD_REPO:-https://github.com/tenstorrent/tt-kmd.git}"
@@ -29,6 +36,13 @@ fi
 export DEBIAN_FRONTEND=noninteractive
 
 echo "Running kernel: ${KVER}"
+if [ "$FORCE" -eq 0 ] && [ -d /sys/module/tenstorrent ]; then
+	LOADED="$(cat /sys/module/tenstorrent/version)"
+	if [ "$LOADED" = "$KMD_VERSION" ]; then
+		echo "tt-kmd loaded: ${LOADED} (already present, skip rebuild)"
+		exit 0
+	fi
+fi
 echo "Building ${KMD_TAG} from ${KMD_REPO}"
 
 "${SUDO[@]}" apt-get update
