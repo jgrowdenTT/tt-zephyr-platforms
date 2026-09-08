@@ -6,7 +6,12 @@ name: Documentation
 on:
   push:
     branches: [main]
-  pull_request: {}
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - labeled
   merge_group:
     types:
       - checks_requested
@@ -20,6 +25,8 @@ env:
 
 jobs:
   gen-config:
+    # Avoid a full docs rebuild when some other PR label is added.
+    if: github.event.action != 'labeled' || github.event.label.name == 'ci-docs'
     runs-on: ubuntu-24.04
     outputs:
       ci-boards: ${{ steps.gen-config.outputs.ci-boards }}
@@ -31,7 +38,8 @@ jobs:
           echo "ci-boards=$(jq -c "[ .[][] | .board ]" .github/ci_boards.json)" | tee -a $GITHUB_OUTPUT
 
   ci-stats:
-    if: github.event_name == 'push'
+    # Label: ci-docs ("Request Documentation CI to be run on this PR")
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'ci-docs')
     needs: [gen-config]
     strategy:
       matrix:
@@ -245,7 +253,7 @@ jobs:
   build-ci-stats:
     runs-on: ubuntu-22.04
     needs: [build, ci-stats, gen-config]
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'ci-docs')
     steps:
       - name: Download docs
         uses: actions/download-artifact@v4
